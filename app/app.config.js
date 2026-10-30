@@ -49,6 +49,7 @@ module.exports = () => ({
       'expo-background-task',
       'expo-secure-store',
       './plugins/withReleaseSigning',
+      './plugins/withNoMinify',
     ],
     extra: {
       dataRepo: process.env.BURSAEDGE_DATA_REPO || '',

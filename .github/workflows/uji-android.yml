@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'app/**'
       - '.github/workflows/uji-android.yml'
       - '.github/skrip/uji-emulator.sh'
 
@@ -21,6 +22,10 @@ jobs:
   uji:
     runs-on: ubuntu-latest
     timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 36]
     env:
       BURSAEDGE_DATA_REPO: ${{ github.repository }}
       BURSAEDGE_DATA_BRANCH: ${{ github.event.repository.default_branch }}
@@ -63,7 +68,7 @@ jobs:
       - name: Jalankan dalam emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ matrix.api }}
           arch: x86_64
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
@@ -79,9 +84,9 @@ jobs:
           tail -400 gradle.txt > gradle-ekor.txt 2>/dev/null || true
           rm -f gradle.txt
           echo "run ${{ github.run_id }} commit ${{ github.sha }} $(date -u)" > INFO.txt
-          git init -q -b ujian-log
+          git init -q -b "ujian-log-${{ matrix.api }}"
           git config user.name "bursaedge-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -q -m "Log ujian ${{ github.run_number }} [skip ci]"
-          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" ujian-log
+          git commit -q -m "Log ujian ${{ github.run_number }} API ${{ matrix.api }} [skip ci]"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" "ujian-log-${{ matrix.api }}"
