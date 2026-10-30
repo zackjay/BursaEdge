@@ -1,0 +1,74 @@
+name: Uji Android (emulator)
+
+# Bina APK x86_64, jalankan dalam emulator Android, lalui skrin permulaan dan
+# simpan log crash + tangkapan skrin sebagai artifak.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/uji-android.yml'
+      - '.github/skrip/uji-emulator.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uji-android
+  cancel-in-progress: true
+
+jobs:
+  uji:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    env:
+      BURSAEDGE_DATA_REPO: ${{ github.repository }}
+      BURSAEDGE_DATA_BRANCH: ${{ github.event.repository.default_branch }}
+      BURSAEDGE_BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Pasang kebergantungan
+        working-directory: app
+        run: npm ci
+
+      - name: Jana projek Android
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Bina APK release (x86_64 untuk emulator)
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
+
+      - name: Hidupkan KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Jalankan dalam emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash .github/skrip/uji-emulator.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ujian-android-log
+          path: ujian-log/
