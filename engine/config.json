@@ -1,0 +1,72 @@
+{
+  "versi": "3.0",
+  "pasaran": "Bursa Malaysia",
+  "indeks_rujukan": "^KLSE",
+  "bilangan_ranking": 10,
+  "tempoh_data": "10y",
+  "horizon": {
+    "harian": {
+      "label": "Harian",
+      "untuk": "Day trader — pegangan 1 hingga 2 hari",
+      "hari_hadapan": 1,
+      "min_nilai_dagangan_rm": 1000000,
+      "min_atr_peratus": 1.0,
+      "henti_rugi_atr": 1.0,
+      "sasaran_r": 1.5,
+      "faktor": {
+        "mom3": 0.22,
+        "vol_sah": 0.24,
+        "posisi_tutup": 0.16,
+        "gap": 0.10,
+        "tembus5": 0.16,
+        "rsi2_pantul": 0.12
+      }
+    },
+    "mingguan": {
+      "label": "Mingguan",
+      "untuk": "Swing trader — pegangan 1 hingga 3 minggu",
+      "hari_hadapan": 5,
+      "min_nilai_dagangan_rm": 500000,
+      "min_atr_peratus": 0.0,
+      "henti_rugi_atr": 2.0,
+      "sasaran_r": 2.0,
+      "faktor": {
+        "mom10": 0.20,
+        "trend_ema": 0.20,
+        "macd_cerun": 0.15,
+        "rsi14": 0.15,
+        "tembus20": 0.15,
+        "vol_trend": 0.15
+      }
+    },
+    "musiman": {
+      "label": "Musiman",
+      "untuk": "Seasonal / position trader — pegangan 1 hingga 3 bulan",
+      "hari_hadapan": 21,
+      "min_nilai_dagangan_rm": 300000,
+      "min_atr_peratus": 0.0,
+      "henti_rugi_atr": 3.0,
+      "sasaran_r": 2.5,
+      "faktor": {
+        "musim": 0.30,
+        "mom6b": 0.20,
+        "trend200": 0.18,
+        "rs_klci": 0.17,
+        "jarak52": 0.15
+      }
+    }
+  },
+  "pembelajaran": {
+    "kadar_ema": 0.15,
+    "skala_ic": 0.10,
+    "had_bawah": 0.4,
+    "had_atas": 2.0,
+    "simpan_snapshot_hari": 30,
+    "simpan_pilihan_dinilai": 120
+  },
+  "musim": {
+    "min_tahun": 3,
+    "maks_tahun": 10,
+    "tetingkap_hari": 21
+  }
+}

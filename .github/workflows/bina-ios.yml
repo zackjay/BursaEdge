@@ -1,0 +1,85 @@
+name: Bina App iOS
+
+# Membina BursaEdge-unsigned.ipa (tanpa tandatangan). Pasang ke iPhone dengan
+# Sideloadly / AltStore menggunakan Apple ID anda — lihat README.
+# Nota: repo private menggunakan minit macOS (10x). Repo public percuma.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/bina-ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bina-ios
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      BURSAEDGE_DATA_REPO: ${{ github.repository }}
+      BURSAEDGE_DATA_BRANCH: ${{ github.event.repository.default_branch }}
+      BURSAEDGE_BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Pilih Xcode terbaru
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+          if [ -n "$XC" ]; then sudo xcode-select -s "$XC"; fi
+          xcodebuild -version
+
+      - name: Pasang kebergantungan
+        working-directory: app
+        run: npm ci
+
+      - name: Jana projek iOS (termasuk CocoaPods)
+        working-directory: app
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Bina app (tanpa tandatangan)
+        working-directory: app/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace BursaEdge.xcworkspace \
+            -scheme BursaEdge \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            -quiet build
+
+      - name: Bungkus IPA
+        run: |
+          mkdir -p keluaran/Payload
+          cp -R app/ios/build/Build/Products/Release-iphoneos/BursaEdge.app keluaran/Payload/
+          cd keluaran && zip -qry BursaEdge-unsigned.ipa Payload && rm -rf Payload
+          cp BursaEdge-unsigned.ipa "BursaEdge-v3.0.0-b${{ github.run_number }}-unsigned.ipa"
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BursaEdge-ios-b${{ github.run_number }}
+          path: keluaran/BursaEdge-v3.0.0-b${{ github.run_number }}-unsigned.ipa
+
+      - name: Terbitkan ke Releases (tag terkini)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTA="Muat turun **BursaEdge.apk** (Android) atau **BursaEdge-unsigned.ipa** (iPhone, perlu sideload). Lihat README untuk cara pasang."
+          gh release view terkini >/dev/null 2>&1 || gh release create terkini --title "BursaEdge — versi terkini" --notes "$NOTA" --target "${GITHUB_SHA}" || true
+          gh release upload terkini keluaran/BursaEdge-unsigned.ipa --clobber

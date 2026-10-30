@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+# Node / Expo (lihat juga app/.gitignore)
+node_modules/
+# Output bina tempatan
+keluaran/
+*.ipa
+*.apk
+.DS_Store

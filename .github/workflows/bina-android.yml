@@ -1,0 +1,105 @@
+name: Bina App Android
+
+# Membina APK BursaEdge dan menerbitkannya di halaman Releases (tag: terkini).
+# Muat turun di telefon: https://github.com/<pemilik>/<repo>/releases/tag/terkini
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/bina-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bina-android
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      BURSAEDGE_DATA_REPO: ${{ github.repository }}
+      BURSAEDGE_DATA_BRANCH: ${{ github.event.repository.default_branch }}
+      BURSAEDGE_BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Pasang kebergantungan
+        working-directory: app
+        run: npm ci
+
+      - name: Semak jenis (TypeScript)
+        working-directory: app
+        run: npx tsc --noEmit
+
+      - name: Jana projek Android
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Sediakan kunci tandatangan
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "Guna keystore daripada GitHub secrets"
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/kunci.keystore"
+            {
+              echo "BURSAEDGE_KEYSTORE=$RUNNER_TEMP/kunci.keystore"
+              echo "BURSAEDGE_KEYSTORE_PASSWORD=$KS_PASS"
+              echo "BURSAEDGE_KEY_ALIAS=$KS_ALIAS"
+              echo "BURSAEDGE_KEY_PASSWORD=${KS_KEY_PASS:-$KS_PASS}"
+            } >> "$GITHUB_ENV"
+          else
+            echo "Guna keystore peribadi dalam repo (app/kunci)"
+            {
+              echo "BURSAEDGE_KEYSTORE=$GITHUB_WORKSPACE/app/kunci/bursaedge-peribadi.keystore"
+              echo "BURSAEDGE_KEYSTORE_PASSWORD=bursaedge"
+              echo "BURSAEDGE_KEY_ALIAS=bursaedge"
+              echo "BURSAEDGE_KEY_PASSWORD=bursaedge"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Bina APK release
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+
+      - name: Sediakan fail
+        run: |
+          mkdir -p keluaran
+          cp app/android/app/build/outputs/apk/release/app-release.apk keluaran/BursaEdge.apk
+          cp keluaran/BursaEdge.apk "keluaran/BursaEdge-v3.0.0-b${{ github.run_number }}.apk"
+          ls -la keluaran
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BursaEdge-android-b${{ github.run_number }}
+          path: keluaran/BursaEdge-v3.0.0-b${{ github.run_number }}.apk
+
+      - name: Terbitkan ke Releases (tag terkini)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTA="Muat turun **BursaEdge.apk** (Android) atau **BursaEdge-unsigned.ipa** (iPhone, perlu sideload). Lihat README untuk cara pasang."
+          gh release view terkini >/dev/null 2>&1 || gh release create terkini --title "BursaEdge — versi terkini" --notes "$NOTA" --target "${GITHUB_SHA}" || true
+          gh release upload terkini keluaran/BursaEdge.apk --clobber
+          gh release edit terkini --notes "$NOTA
+
+          Android: bina #${{ github.run_number }} ($(date -u +%Y-%m-%d))" || true
