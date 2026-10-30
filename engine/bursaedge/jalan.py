@@ -150,12 +150,19 @@ def jalan(args) -> int:
     basi = [t for t, df in semua.items() if df.index[-1] < had_basi]
     for t in basi:
         semua.pop(t)
+    # Data meragukan: lonjakan sehari > 35% (melebihi had harga Bursa) — biasanya
+    # tindakan korporat belum dilaraskan atau ralat data. Keluarkan daripada analisa.
+    meragukan = []
+    for t, df in list(semua.items()):
+        if len(df) >= 2 and abs(float(df["Close"].iloc[-1] / df["Close"].iloc[-2]) - 1.0) > 0.35:
+            meragukan.append(t)
+            semua.pop(t)
     harga_tutup = {t: df["Close"] for t, df in semua.items()}
     indeks_tutup = indeks_df["Close"] if indeks_df is not None else None
 
     larian_lama = state.get("tarikh_larian", [])
     hari_baru = tarikh_data not in larian_lama
-    log.info("Tarikh data %s (%s), %d saham, %d gagal, %d basi", tarikh_data, "baru" if hari_baru else "larian semula", len(semua), len(gagal), len(basi))
+    log.info("Tarikh data %s (%s), %d saham, %d gagal, %d basi, %d meragukan", tarikh_data, "baru" if hari_baru else "larian semula", len(semua), len(gagal), len(basi), len(meragukan))
 
     # 2) Belajar daripada keputusan lepas (sebelum skor hari ini)
     bil_ic = pb.kemas_kini_ic(state, cfg, harga_tutup)
@@ -231,6 +238,7 @@ def jalan(args) -> int:
         "sampel": bool(args.sampel),
         "bilangan_saham_dianalisa": len(semua),
         "ticker_gagal": sorted(gagal + basi),
+        "data_meragukan": sorted(meragukan),
         "tarikh_larian": state.get("tarikh_larian", [])[-60:],
         "pasaran": ringkasan_pasaran(indeks_df, semua, tarikh_data),
         "horizon": hasil_horizon,
