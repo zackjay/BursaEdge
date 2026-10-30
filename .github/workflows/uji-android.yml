@@ -11,7 +11,7 @@ on:
       - '.github/skrip/uji-emulator.sh'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: uji-android
@@ -49,7 +49,10 @@ jobs:
 
       - name: Bina APK release (x86_64 untuk emulator)
         working-directory: app/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/ujian-log"
+          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64 2>&1 | tee "$GITHUB_WORKSPACE/ujian-log/gradle.txt" | tail -60
 
       - name: Hidupkan KVM
         run: |
@@ -67,8 +70,18 @@ jobs:
           disable-animations: true
           script: bash .github/skrip/uji-emulator.sh
 
-      - uses: actions/upload-artifact@v4
+      - name: Terbitkan log ke cawangan ujian-log
         if: always()
-        with:
-          name: ujian-android-log
-          path: ujian-log/
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ujian-log && cd ujian-log
+          tail -400 gradle.txt > gradle-ekor.txt 2>/dev/null || true
+          rm -f gradle.txt
+          echo "run ${{ github.run_id }} commit ${{ github.sha }} $(date -u)" > INFO.txt
+          git init -q -b ujian-log
+          git config user.name "bursaedge-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Log ujian ${{ github.run_number }} [skip ci]"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" ujian-log
