@@ -3,12 +3,9 @@ name: Bina App iOS
 # Membina BursaEdge-unsigned.ipa (tanpa tandatangan). Pasang ke iPhone dengan
 # Sideloadly / AltStore menggunakan Apple ID anda — lihat README.
 # Nota: repo private menggunakan minit macOS (10x). Repo public percuma.
+# DITANGGUHKAN: iOS diketepikan buat masa ini — hanya berjalan jika dicetuskan
+# secara manual (Actions → Bina App iOS → Run workflow).
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - '.github/workflows/bina-ios.yml'
   workflow_dispatch:
 
 permissions:

@@ -49,7 +49,10 @@ Ketepatan setiap ranking direkod dan dipaparkan dalam tab **Prestasi**.
 3. Kemas kini seterusnya: muat turun APK baru dan pasang di atas yang lama (data tetap disimpan).
 4. Supaya notifikasi tepat masa, matikan *pengoptimuman bateri* untuk BursaEdge.
 
-## Pasang di iPhone
+## Pasang di iPhone (ditangguhkan)
+
+> Buat masa ini iOS diketepikan: aliran kerja `bina-ios.yml` tidak berjalan automatik. Bila
+> diperlukan, cetuskan manual di *Actions → Bina App iOS → Run workflow*.
 
 iOS tidak membenarkan pemasangan APK-style. Workflow menghasilkan **BursaEdge-unsigned.ipa**;
 tandatangan dengan Apple ID anda sendiri:
