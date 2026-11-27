@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { muatCarta } from './data';
 import GrafHarga, { labelMasa } from './GrafHarga';
@@ -125,7 +125,7 @@ export default function ButiranSaham({ ticker, horizonAwal, data, tetapan, pilih
 
   return (
     <Modal visible animationType="slide" onRequestClose={tutup} presentationStyle="pageSheet">
-      <View style={{ flex: 1, backgroundColor: warna.latar, paddingTop: 12 }}>
+      <View style={{ flex: 1, backgroundColor: warna.latar, paddingTop: Platform.OS === 'android' ? inset.top + 8 : 12 }}>
         <View style={st.kepala}>
           <View style={{ flex: 1 }}>
             <Text style={st.nama}>{saham?.nama ?? ticker.replace('.KL', '')}</Text>

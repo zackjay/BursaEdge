@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ButiranSaham from './src/ButiranSaham';
 import { DataTerkini, Horizon, LogPenemuan, PilihanSaya, Tetapan } from './src/jenis';
@@ -200,7 +200,7 @@ function Utama() {
         tutup={() => setDibuka(null)}
       />
       <Modal visible={prestasiBuka} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setPrestasiBuka(false)}>
-        <View style={{ flex: 1, backgroundColor: warna.latar, paddingTop: 12 }}>
+        <View style={{ flex: 1, backgroundColor: warna.latar, paddingTop: Platform.OS === 'android' ? inset.top + 8 : 12 }}>
           <View style={st.modalKepala}>
             <Pressable onPress={() => setPrestasiBuka(false)} hitSlop={12} style={st.tutup} accessibilityLabel="Tutup">
               <Text style={{ color: warna.teks, fontSize: 18 }}>✕</Text>
