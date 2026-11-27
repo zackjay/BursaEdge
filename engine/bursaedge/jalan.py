@@ -187,6 +187,7 @@ def jalan(args) -> int:
     # 2) Belajar daripada keputusan lepas (sebelum skor hari ini)
     bil_ic = pb.kemas_kini_ic(state, cfg, harga_tutup)
     bil_pilihan = pb.nilai_pilihan(state, cfg, harga_tutup)
+    cad_mod.isi_semula(state, cfg, keluar / "sejarah", semua, indeks_df, tarikh_data)
     bil_cadangan = cad_mod.nilai(state, semua)
     pemberat = pb.pemberat_semasa(state, cfg)
     log.info("Pembelajaran: IC dinilai %s, pilihan dinilai %d, cadangan dinilai %d", bil_ic, bil_pilihan, bil_cadangan)
