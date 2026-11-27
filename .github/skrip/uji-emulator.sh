@@ -24,10 +24,10 @@ dump_ui() {
 cari_sekali() {
   dump_ui
   python3 - "$1" <<'PY'
-import re, sys
+import re, sys, html
 teks = sys.argv[1]
 x = open("ujian-log/ui.xml", encoding="utf-8", errors="ignore").read()
-nod = [(m.group(1), tuple(map(int, m.groups()[1:]))) for m in re.finditer(
+nod = [(html.unescape(m.group(1)), tuple(map(int, m.groups()[1:]))) for m in re.finditer(
     r'<node [^>]*?text="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', x)]
 pilih = [b for t, b in nod if t == teks] or [b for t, b in nod if teks in t]
 if pilih:
@@ -133,7 +133,7 @@ tekan_teks "Ingatkan masa beli & jual"; langkah 25-peringatan 2
 tekan_teks "Uji peringatan (tiba dalam 1 minit)" && { sleep 2; adb exec-out screencap -p > ujian-log/26-uji-dijadual.png; tekan_teks "OK" tiada; }
 adb shell dumpsys alarm | grep -B2 -A12 "$PAKEJ" | head -120 > ujian-log/alarm.txt 2>&1
 adb shell dumpsys notification --noredact 2>/dev/null | grep -A3 "NotificationChannel{mId='peringatan'" | head -8 >> ujian-log/alarm.txt
-tekan_teks "Modal & kos moomoo"; langkah 27-kos 2
+tekan_teks "Modal bagi setiap dagangan"; langkah 27-kos 2
 adb shell input keyevent 3; sleep 75
 adb shell cmd statusbar expand-notifications; sleep 3
 adb exec-out screencap -p > ujian-log/28-notifikasi-ujian.png
