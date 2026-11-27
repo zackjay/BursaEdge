@@ -250,7 +250,7 @@ def jalan(args) -> int:
     for h in cfg["horizon"]:
         cad = cad_mod.jana(h, cfg, ranking_h, meta_semua, pasaran["rejim"], state, tarikh_data)
         cad_mod.rekod(state, tarikh_data, h, cad)
-        hasil_horizon[h]["cadangan"] = cad
+        hasil_horizon[h]["cadangan"] = {k: v for k, v in cad.items() if not k.startswith("bayangan_")}
         hasil_horizon[h]["prestasi_cadangan"] = cad_mod.ringkasan(state, h)
 
     # 4) Simpan keadaan
@@ -266,7 +266,7 @@ def jalan(args) -> int:
         h: list(reversed(state.get("pilihan_dinilai", {}).get(h, [])))[:60] for h in cfg["horizon"]
     }
     cadangan_lepas = {
-        h: list(reversed(state.get("cadangan_dinilai", {}).get(h, [])))[:40] for h in cfg["horizon"]
+        h: [p for p in reversed(state.get("cadangan_dinilai", {}).get(h, [])) if not p.get("bayangan")][:40] for h in cfg["horizon"]
     }
     semua_saham = senarai_saham(semua, meta_semua, maklumat, ranking_h, skor_semua_h)
     latest = {
