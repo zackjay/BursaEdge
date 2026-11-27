@@ -1,10 +1,13 @@
 name: Analisa Harian
 
-# Berjalan sendiri setiap hari bekerja sejam selepas Bursa tutup (5:00 ptg MYT) supaya harga akhir hari lengkap.
-# 10:17 UTC = 6:17 ptg waktu Malaysia. GitHub boleh lewat 5–20 minit.
+# Berjalan sendiri setiap hari bekerja selepas Bursa tutup (5:00 ptg MYT).
+# 10:17 UTC = 6:17 ptg dan 13:47 UTC = 9:47 mlm waktu Malaysia (larian sandaran).
+# Jadual GitHub kerap lewat beberapa jam; larian kedua bagi tarikh yang sama
+# hanya menyegarkan data (tiada notifikasi berulang).
 on:
   schedule:
     - cron: '17 10 * * 1-5'
+    - cron: '47 13 * * 1-5'
   workflow_dispatch:
     inputs:
       paksa_notifikasi:
@@ -27,7 +30,7 @@ concurrency:
 jobs:
   analisa:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
 
@@ -56,7 +59,7 @@ jobs:
         run: |
           ARGS=""
           if [ "$PAKSA" = "true" ]; then ARGS="--paksa-notifikasi"; fi
-          python -m bursaedge.jalan $ARGS
+          python -m bursaedge.jalan $ARGS --carta "$GITHUB_WORKSPACE/carta_keluar"
 
       - name: Terbitkan keputusan ke repo
         run: |
@@ -75,3 +78,18 @@ jobs:
           done
           echo "Gagal menolak keputusan" >&2
           exit 1
+
+      - name: Terbitkan data graf ke cawangan carta
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          [ -d carta_keluar ] || { echo "Tiada data graf"; exit 0; }
+          cd carta_keluar
+          TARIKH=$(python -c "import json,glob;print(json.load(open(sorted(glob.glob('*.json'))[0]))['tarikh_data'])")
+          git init -q -b carta
+          git config user.name "bursaedge-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Graf ${TARIKH} [skip ci]"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" carta
+          echo "Cawangan carta dikemas kini ($(ls *.json | wc -l) fail)"

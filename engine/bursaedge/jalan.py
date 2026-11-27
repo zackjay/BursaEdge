@@ -21,6 +21,8 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
+from . import cadangan as cad_mod
+from . import carta as carta_mod
 from . import data as data_mod
 from . import notifikasi
 from . import pembelajaran as pb
@@ -127,15 +129,29 @@ def jalan(args) -> int:
     tickers = list(maklumat.keys())
     kod_indeks = cfg.get("indeks_rujukan", "^KLSE")
 
-    # 1) Data
+    # 1) Data harian (sejarah penuh) + intraday 5 minit (5 sesi terakhir)
     if args.sampel:
         tarikh_akhir = args.sampel_tarikh or pd.Timestamp.today().strftime("%Y-%m-%d")
         semua = data_mod.data_sampel(tickers + [kod_indeks], tarikh_akhir)
+        intraday = data_mod.intraday_sampel(semua)
+        # Tiru kelewatan Yahoo: buang bar harian terakhir bagi kebanyakan saham
+        for k, t in enumerate(list(semua)):
+            if k % 5:
+                semua[t] = semua[t].iloc[:-1]
         gagal = []
         sumber = "SAMPEL RAWAK (bukan data sebenar)"
+        kini = pd.Timestamp(tarikh_akhir).tz_localize(data_mod.ZON) + pd.Timedelta(hours=20)
     else:
-        semua, gagal = data_mod.muat_turun(tickers + [kod_indeks], tempoh=cfg.get("tempoh_data", "10y"))
+        semua, gagal = data_mod.muat_turun(tickers + [kod_indeks], tempoh=cfg.get("tempoh_data", "max"))
+        try:
+            intraday = data_mod.muat_turun_intraday(tickers + [kod_indeks])
+        except Exception as e:  # noqa: BLE001
+            log.warning("Intraday tidak tersedia: %s", e)
+            intraday = {}
         sumber = "Yahoo Finance (yfinance), harga akhir hari"
+        kini = None
+    dari_intraday = data_mod.lengkapkan_harian(semua, intraday, kini)
+    log.info("Intraday: %d saham; bar harian dilengkapkan daripada intraday: %d", len(intraday), len(dari_intraday))
     indeks_df = semua.pop(kod_indeks, None)
     gagal = [g for g in gagal if g != kod_indeks]
     if len(semua) < 20:
@@ -167,11 +183,15 @@ def jalan(args) -> int:
     # 2) Belajar daripada keputusan lepas (sebelum skor hari ini)
     bil_ic = pb.kemas_kini_ic(state, cfg, harga_tutup)
     bil_pilihan = pb.nilai_pilihan(state, cfg, harga_tutup)
+    bil_cadangan = cad_mod.nilai(state, semua)
     pemberat = pb.pemberat_semasa(state, cfg)
-    log.info("Pembelajaran: IC dinilai %s, pilihan dinilai %d", bil_ic, bil_pilihan)
+    log.info("Pembelajaran: IC dinilai %s, pilihan dinilai %d, cadangan dinilai %d", bil_ic, bil_pilihan, bil_cadangan)
 
     # 3) Faktor & ranking setiap horizon
     meta_semua = {t: meta_asas(df) for t, df in semua.items()}
+    pasaran = ringkasan_pasaran(indeks_df, semua, tarikh_data)
+    skor_semua_h: Dict[str, Dict[str, float]] = {}
+    ranking_h: Dict[str, Dict[str, List[dict]]] = {}
     bilangan = int(cfg.get("bilangan_ranking", 10))
     ambang = int(cfg.get("ambang_naik_kedudukan", 2))
     ranking_hist = state.setdefault("ranking", {})
@@ -193,7 +213,9 @@ def jalan(args) -> int:
             if f:
                 faktor[t] = f
                 meta[t] = {**meta_semua[t], **m}
-        bull, bear, z_semua = skor_horizon(h, cfg_h, pemberat[h], faktor, meta, maklumat, bilangan)
+        bull, bear, z_semua, skor_semua = skor_horizon(h, cfg_h, pemberat[h], faktor, meta, maklumat, bilangan)
+        skor_semua_h[h] = skor_semua
+        ranking_h[h] = {"bullish": bull, "bearish": bear}
         sebelum = rank_sebelum.get(h, {})
         penemuan += kesan_perubahan(bull, sebelum.get("bullish", []), h, "bullish", ambang)
         penemuan += kesan_perubahan(bear, sebelum.get("bearish", []), h, "bearish", ambang)
@@ -211,10 +233,20 @@ def jalan(args) -> int:
             "ic": {k: round(v, 4) for k, v in state.get("ic_ema", {}).get(h, {}).items()},
             "hari_dipelajari": int(state.get("bilangan_ic", {}).get(h, 0)),
             "faktor_label": {k: LABEL_FAKTOR.get(k, k) for k in cfg_h["faktor"]},
+            "henti_rugi_atr": cfg_h.get("henti_rugi_atr"),
+            "sasaran_r": cfg_h.get("sasaran_r"),
+            "pegangan_hari": cfg_h.get("pegangan_maks_hari", cfg_h["hari_hadapan"]),
             "bullish": bull,
             "bearish": bear,
             "prestasi": pb.ringkasan_prestasi(state, h),
         }
+
+    # 3b) Cadangan BELI / ELAK bagi setiap horizon
+    for h in cfg["horizon"]:
+        cad = cad_mod.jana(h, cfg, ranking_h, meta_semua, pasaran["rejim"], state, tarikh_data)
+        cad_mod.rekod(state, tarikh_data, h, cad)
+        hasil_horizon[h]["cadangan"] = cad
+        hasil_horizon[h]["prestasi_cadangan"] = cad_mod.ringkasan(state, h)
 
     # 4) Simpan keadaan
     ranking_hist[tarikh_data] = rank_hari_ini
@@ -228,6 +260,10 @@ def jalan(args) -> int:
     pilihan_lepas = {
         h: list(reversed(state.get("pilihan_dinilai", {}).get(h, [])))[:60] for h in cfg["horizon"]
     }
+    cadangan_lepas = {
+        h: list(reversed(state.get("cadangan_dinilai", {}).get(h, [])))[:40] for h in cfg["horizon"]
+    }
+    semua_saham = senarai_saham(semua, meta_semua, maklumat, ranking_h, skor_semua_h)
     latest = {
         "versi_skema": VERSI_SKEMA,
         "versi_enjin": cfg.get("versi", "3.0"),
@@ -240,21 +276,31 @@ def jalan(args) -> int:
         "ticker_gagal": sorted(gagal + basi),
         "data_meragukan": sorted(meragukan),
         "tarikh_larian": state.get("tarikh_larian", [])[-60:],
-        "pasaran": ringkasan_pasaran(indeks_df, semua, tarikh_data),
+        "pasaran": pasaran,
+        "bilangan_intraday": len(intraday),
+        "harian_dari_intraday": len(dari_intraday),
+        "cawangan_carta": "carta",
         "horizon": hasil_horizon,
         "penemuan_baru": penemuan,
         "pilihan_lepas": pilihan_lepas,
+        "cadangan_lepas": cadangan_lepas,
+        "semua_saham": semua_saham,
         "penafian": "Analisa teknikal automatik untuk rujukan sahaja. Bukan nasihat pelaburan.",
     }
     latest = _bersihkan_nan(latest)
     _tulis_json(keluar / "latest.json", latest, padat=True)
-    ringkas = {k: v for k, v in latest.items() if k not in ("pilihan_lepas",)}
+    ringkas = {k: v for k, v in latest.items() if k not in ("pilihan_lepas", "cadangan_lepas", "semua_saham")}
     ringkas["horizon"] = {
         h: {**v, "bullish": [{k: x[k] for k in x if k != "faktor_z"} for x in v["bullish"]], "bearish": [{k: x[k] for k in x if k != "faktor_z"} for x in v["bearish"]]}
         for h, v in latest["horizon"].items()
     }
     _tulis_json(keluar / "sejarah" / f"{tarikh_data}.json", ringkas, padat=True)
     _buang_sejarah_lama(keluar / "sejarah", 400)
+
+    # 4b) Fail graf setiap saham (diterbitkan ke cawangan 'carta' oleh aliran kerja)
+    if args.carta:
+        bil_carta = carta_mod.tulis_semua(Path(args.carta).resolve(), maklumat, semua, intraday, tarikh_data, dijana)
+        log.info("Fail graf ditulis: %d", bil_carta)
 
     # 5) Notifikasi pelayan (Telegram / ntfy) — sekali sahaja bagi setiap tarikh data
     dimaklum = state.setdefault("dimaklum", [])
@@ -272,7 +318,56 @@ def jalan(args) -> int:
         atas = ", ".join(x["nama"] for x in v["bullish"][:3])
         bawah = ", ".join(x["nama"] for x in v["bearish"][:3])
         print(f"  {v['label']:<9} bullish: {atas} | bearish: {bawah}")
+        c = v["cadangan"]
+        print(f"  {'':<9} BELI: {', '.join(x['nama'] + '(' + x['gred'] + ')' for x in c['beli'])} | ELAK: {', '.join(x['nama'] for x in c['elak'])}")
+        for n in c["nota"]:
+            print(f"  {'':<9} nota: {n}")
     return 0
+
+
+def _r(x, d=2):
+    try:
+        x = float(x)
+    except (TypeError, ValueError):
+        return None
+    return round(x, d) if math.isfinite(x) else None
+
+
+def senarai_saham(semua, meta_semua, maklumat, ranking_h, skor_semua_h) -> List[dict]:
+    """Ringkasan setiap saham untuk skrin Saham dalam app (termasuk garis mini 30 hari)."""
+    kedudukan = {}
+    for h, r in ranking_h.items():
+        for sisi in ("bullish", "bearish"):
+            for item in r[sisi]:
+                kedudukan.setdefault(item["ticker"], {})[h] = {"sisi": sisi, "kedudukan": item["kedudukan"]}
+    hasil = []
+    for t, df in semua.items():
+        m = meta_semua.get(t, {})
+        info = maklumat.get(t, {})
+        tutup = df["Close"].tail(30)
+        hasil.append(
+            {
+                "ticker": t,
+                "kod": info.get("kod", t.replace(".KL", "")),
+                "nama": info.get("nama", t),
+                "sektor": info.get("sektor", ""),
+                "harga": _r(m.get("harga"), 3),
+                "ubah_peratus": _r(m.get("ubah_peratus")),
+                "ubah_5h": _r(m.get("ubah_5h")),
+                "ubah_21h": _r(m.get("ubah_21h")),
+                "ubah_252h": _r(m.get("ubah_252h")),
+                "atr": _r(m.get("atr"), 4),
+                "atr_peratus": _r(m.get("atr_peratus")),
+                "nilai_dagangan_rm": _r(m.get("nilai_dagangan20"), 0),
+                "tinggi52": _r(m.get("tinggi52"), 3),
+                "rendah52": _r(m.get("rendah52"), 3),
+                "spark": [float(f"{x:.5g}") for x in tutup if math.isfinite(x)],
+                "status": kedudukan.get(t, {}),
+                "skor": {h: s[t] for h, s in skor_semua_h.items() if t in s},
+            }
+        )
+    hasil.sort(key=lambda x: x["nama"])
+    return hasil
 
 
 def _buang_sejarah_lama(folder: Path, simpan: int):
@@ -290,6 +385,7 @@ def main(argv=None) -> int:
     ap.add_argument("--sampel-tarikh", default=None, help="Tarikh akhir data sampel (YYYY-MM-DD)")
     ap.add_argument("--tanpa-notifikasi", action="store_true")
     ap.add_argument("--paksa-notifikasi", action="store_true", help="Hantar walaupun tarikh sudah dimaklumkan")
+    ap.add_argument("--carta", default=None, help="Folder output fail graf setiap saham (pilihan)")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     return jalan(args)

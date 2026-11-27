@@ -36,7 +36,7 @@ def skor_horizon(
     maklumat: Dict[str, dict],
     bilangan: int,
 ):
-    """Pulangkan (bullish, bearish, z_semua) untuk satu horizon."""
+    """Pulangkan (bullish, bearish, z_semua, skor_semua) untuk satu horizon."""
     nama_faktor = list(cfg_h["faktor"].keys())
     calon = []
     for t, f in faktor.items():
@@ -53,7 +53,7 @@ def skor_horizon(
         calon.append(t)
 
     if len(calon) < 5:
-        return [], [], {}
+        return [], [], {}, {}
 
     jadual = pd.DataFrame({t: {k: faktor[t].get(k, np.nan) for k in nama_faktor} for t in calon}).T
     z = zskor(jadual)
@@ -115,4 +115,6 @@ def skor_horizon(
     bearish = [bina(t, "bearish", i + 1) for i, t in enumerate([t for t in tertib_turun.index if tertib_turun[t] < 0][:bilangan])]
 
     z_semua = {t: {k: round(float(z.at[t, k]), 3) for k in nama_faktor} for t in calon}
-    return bullish, bearish, z_semua
+    # Skor 0–100 bagi setiap saham layak (50 = neutral, >50 condong bullish)
+    skor_semua = {t: round(50.0 + 50.0 * math.tanh(float(komposit[t]) / 0.8), 1) for t in calon}
+    return bullish, bearish, z_semua, skor_semua

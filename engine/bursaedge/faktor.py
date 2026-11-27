@@ -69,7 +69,22 @@ def meta_asas(df: pd.DataFrame) -> Dict[str, float]:
         "tinggi52": _selamat(df["High"].tail(252).max()),
         "rendah52": _selamat(df["Low"].tail(252).min()),
         "volum": _selamat(df["Volume"].iloc[-1]),
+        # Purata bergerak untuk penapis aliran cadangan
+        "ema21": _selamat(p.ema(tutup.tail(400), 21).iloc[-1]),
+        "sma50": _selamat(p.sma(tutup, 50).iloc[-1]) if len(tutup) >= 50 else float("nan"),
+        "sma200": _selamat(p.sma(tutup, 200).iloc[-1]) if len(tutup) >= 200 else float("nan"),
+        # Perubahan harga (%) bagi 1 minggu, 1 bulan, 1 tahun dagangan
+        "ubah_5h": _ubah(tutup, 5),
+        "ubah_21h": _ubah(tutup, 21),
+        "ubah_252h": _ubah(tutup, 252),
     }
+
+
+def _ubah(tutup: pd.Series, n: int) -> float:
+    if len(tutup) <= n:
+        return float("nan")
+    lama = float(tutup.iloc[-1 - n])
+    return (float(tutup.iloc[-1]) / lama - 1.0) * 100.0 if lama > 0 else float("nan")
 
 
 def faktor_harian(df: pd.DataFrame) -> Tuple[Dict[str, float], Dict[str, float]]:

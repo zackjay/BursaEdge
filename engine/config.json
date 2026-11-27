@@ -1,9 +1,9 @@
 {
-  "versi": "3.0",
+  "versi": "3.1",
   "pasaran": "Bursa Malaysia",
   "indeks_rujukan": "^KLSE",
   "bilangan_ranking": 10,
-  "tempoh_data": "10y",
+  "tempoh_data": "max",
   "horizon": {
     "harian": {
       "label": "Harian",
@@ -17,10 +17,15 @@
         "mom3": 0.22,
         "vol_sah": 0.24,
         "posisi_tutup": 0.16,
-        "gap": 0.10,
+        "gap": 0.1,
         "tembus5": 0.16,
         "rsi2_pantul": 0.12
-      }
+      },
+      "pegangan_maks_hari": 2,
+      "zon_masuk_atr": [
+        0.3,
+        0.1
+      ]
     },
     "mingguan": {
       "label": "Mingguan",
@@ -31,34 +36,44 @@
       "henti_rugi_atr": 2.0,
       "sasaran_r": 2.0,
       "faktor": {
-        "mom10": 0.20,
-        "trend_ema": 0.20,
+        "mom10": 0.2,
+        "trend_ema": 0.2,
         "macd_cerun": 0.15,
         "rsi14": 0.15,
         "tembus20": 0.15,
         "vol_trend": 0.15
-      }
+      },
+      "pegangan_maks_hari": 15,
+      "zon_masuk_atr": [
+        0.5,
+        0.2
+      ]
     },
     "musiman": {
-      "label": "Musiman",
-      "untuk": "Seasonal / position trader — pegangan 1 hingga 3 bulan",
+      "label": "Bulanan",
+      "untuk": "Position / seasonal trader — pegangan 1 hingga 3 bulan",
       "hari_hadapan": 21,
       "min_nilai_dagangan_rm": 300000,
       "min_atr_peratus": 0.0,
       "henti_rugi_atr": 3.0,
       "sasaran_r": 2.5,
       "faktor": {
-        "musim": 0.30,
-        "mom6b": 0.20,
+        "musim": 0.3,
+        "mom6b": 0.2,
         "trend200": 0.18,
         "rs_klci": 0.17,
         "jarak52": 0.15
-      }
+      },
+      "pegangan_maks_hari": 42,
+      "zon_masuk_atr": [
+        0.8,
+        0.3
+      ]
     }
   },
   "pembelajaran": {
     "kadar_ema": 0.15,
-    "skala_ic": 0.10,
+    "skala_ic": 0.1,
     "had_bawah": 0.4,
     "had_atas": 2.0,
     "simpan_snapshot_hari": 30,
@@ -68,5 +83,14 @@
     "min_tahun": 3,
     "maks_tahun": 10,
     "tetingkap_hari": 21
+  },
+  "cadangan": {
+    "bilangan_beli": 5,
+    "bilangan_elak": 5,
+    "min_skor": 65,
+    "min_keyakinan": 60,
+    "rejim_tambah_keyakinan": 10,
+    "rejim_had": 3,
+    "ambang_ketepatan_lemah": 40
   }
 }
