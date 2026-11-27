@@ -150,8 +150,12 @@ def jalan(args) -> int:
             intraday = {}
         sumber = "Yahoo Finance (yfinance), harga akhir hari"
         kini = None
+    separa = data_mod.buang_sesi_belum_tamat(semua, kini)
     dari_intraday = data_mod.lengkapkan_harian(semua, intraday, kini)
-    log.info("Intraday: %d saham; bar harian dilengkapkan daripada intraday: %d", len(intraday), len(dari_intraday))
+    log.info(
+        "Intraday: %d saham; bar separa hari ini dibuang: %d; bar harian dilengkapkan daripada intraday: %d",
+        len(intraday), separa, len(dari_intraday),
+    )
     indeks_df = semua.pop(kod_indeks, None)
     gagal = [g for g in gagal if g != kod_indeks]
     if len(semua) < 20:

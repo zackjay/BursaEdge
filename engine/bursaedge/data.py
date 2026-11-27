@@ -179,6 +179,21 @@ def lengkapkan_harian(harian: Dict[str, pd.DataFrame], intraday: Dict[str, pd.Da
     return ditambah
 
 
+def buang_sesi_belum_tamat(harian: Dict[str, pd.DataFrame], kini: pd.Timestamp | None = None) -> int:
+    """Semasa pasaran masih dibuka, Yahoo memberi bar harian separa untuk hari ini.
+    Bar itu bukan harga tutup sebenar — buang supaya analisa hanya guna sesi yang tamat."""
+    kini = kini or pd.Timestamp.now(tz=ZON)
+    if kini.hour * 60 + kini.minute >= 17 * 60 + 5:
+        return 0
+    hari_ini = pd.Timestamp(kini.date())
+    bil = 0
+    for t, df in list(harian.items()):
+        if len(df) and df.index[-1] >= hari_ini:
+            harian[t] = df[df.index < hari_ini]
+            bil += 1
+    return bil
+
+
 def intraday_sampel(harian: Dict[str, pd.DataFrame], hari: int = 5, benih: int = 11) -> Dict[str, pd.DataFrame]:
     """Intraday rawak 5 minit (09:00–12:30, 14:30–16:55) yang konsisten dengan bar harian sampel."""
     hasil = {}
