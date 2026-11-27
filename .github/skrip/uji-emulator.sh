@@ -85,7 +85,10 @@ adb shell pm grant "$PAKEJ" android.permission.POST_NOTIFICATIONS 2>&1 | tee -a 
 adb logcat -c
 echo "== Lancar app"
 adb shell monkey -p "$PAKEJ" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-langkah 01-mula 25
+sleep 20
+# Dialog "isn't responding" pelancar emulator kadang-kadang menutup skrin — tutup dahulu
+for n in 1 2 3; do b=$(cari_sekali "Wait"); [ -n "$b" ] && { adb shell input tap $b; sleep 4; } || break; done
+langkah 01-mula 5
 tekan_teks "Seterusnya"; langkah 02-tempoh 4
 tekan_teks "Seterusnya"; langkah 03-repo 4
 tekan_teks "Mula tanpa notifikasi"; langkah 04-cadangan 25
