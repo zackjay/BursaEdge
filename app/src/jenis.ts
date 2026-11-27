@@ -250,6 +250,7 @@ export interface DataTerkini {
   penafian: string;
   // v3.1
   cadangan_lepas?: Record<Horizon, CadanganDinilai[]>;
+  cadangan_terbuka?: CadanganTerbuka[];
   semua_saham?: SahamRingkas[];
   cawangan_carta?: string;
   harian_dari_intraday?: number;
@@ -270,6 +271,42 @@ export interface Tetapan {
   maklumSemasaPemantauan: boolean;
   repo: string;
   cawangan: string;
+  peringatan: TetapanPeringatan;
+  kos: TetapanKos;
+}
+
+export interface TetapanPeringatan {
+  aktif: boolean;
+  /** semua = semua cadangan BELI; rekod = hanya horizon dengan rekod purata ≥ +1R; pilihan = Pilihan Saya sahaja */
+  skop: 'semua' | 'rekod' | 'pilihan';
+  horizon: Horizon[];
+  masaBeli: string; // 'HH:MM' waktu Malaysia
+  masaJual: string;
+  ambangR: number;
+  penggera: boolean; // guna penggera sistem (paling tepat masa)
+}
+
+export interface TetapanKos {
+  modal: number; // RM bagi setiap dagangan
+  komisenPeratus: number;
+  yuranPlatform: number;
+  komisenPercuma: boolean;
+}
+
+export interface CadanganTerbuka {
+  tarikh: string;
+  horizon: Horizon;
+  ticker: string;
+  kod: string;
+  nama: string;
+  gred?: string | null;
+  harga: number;
+  henti_rugi: number;
+  sasaran: number;
+  pegangan: number;
+  hari_ke: number;
+  harga_semasa: number;
+  r_semasa: number | null;
 }
 
 export interface LogPenemuan {

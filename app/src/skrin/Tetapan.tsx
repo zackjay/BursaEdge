@@ -7,7 +7,10 @@ import { adaVersiBaru, BINA_SEMASA, semakVersi, VERSI_SEMASA } from '../kemaskin
 import { statusLatar } from '../latarBelakang';
 import { hantarUjian, kebenaranAda, mintaKebenaran } from '../notifikasi';
 import { kiraPemantauan } from '../semak';
-import { bacaSemakanTerakhir, bacaToken, simpanToken } from '../storan';
+import { anggar, kosSebelah, unitUntukModal } from '../kos';
+import { ujiPeringatan } from '../peringatan';
+import { fmtJam, rekodKuat } from '../peringatanLogik';
+import { bacaSemakanTerakhir, bacaToken, KeadaanPeringatan, simpanToken } from '../storan';
 import { fmtMasa, INFO_HORIZON, warna } from '../tema';
 
 interface Props {
@@ -15,6 +18,8 @@ interface Props {
   data: DataTerkini | null;
   kemaskini: (t: Partial<T>) => void;
   muatSemula: () => void;
+  keadaanP: KeadaanPeringatan;
+  muatKeadaan: () => void;
 }
 
 const LABEL_FASA: Record<FasaNotifikasi, string> = {
@@ -24,7 +29,11 @@ const LABEL_FASA: Record<FasaNotifikasi, string> = {
   senyap: 'Senyap — tiada notifikasi',
 };
 
-export default function Tetapan({ tetapan, data, kemaskini, muatSemula }: Props) {
+export default function Tetapan({ tetapan, data, kemaskini, muatSemula, keadaanP, muatKeadaan }: Props) {
+  const pr = tetapan.peringatan;
+  const kos = tetapan.kos;
+  const setPr = (x: Partial<typeof pr>) => kemaskini({ peringatan: { ...pr, ...x } });
+  const setKos = (x: Partial<typeof kos>) => kemaskini({ kos: { ...kos, ...x } });
   const [repo, setRepo] = useState(tetapan.repo);
   const [cawangan, setCawangan] = useState(tetapan.cawangan);
   const [token, setToken] = useState('');
@@ -169,6 +178,145 @@ export default function Tetapan({ tetapan, data, kemaskini, muatSemula }: Props)
             if (!ok) Alert.alert('Kebenaran diperlukan', 'Benarkan notifikasi untuk BursaEdge dalam tetapan telefon.');
           }}
         />
+      </Kad>
+
+      <Text style={st.label}>Peringatan beli & jual</Text>
+      <Kad>
+        <View style={st.baris}>
+          <View style={{ flex: 1 }}>
+            <Text style={st.teks}>Ingatkan masa beli & jual</Text>
+            <Text style={st.nota}>
+              Beli {fmtJam(pr.masaBeli)} (pasaran dibuka 9:00 pg) · Jual {fmtJam(pr.masaJual)} (dagangan berterusan tamat 4:45 ptg, tutup 5:00 ptg)
+            </Text>
+          </View>
+          <Switch
+            value={pr.aktif}
+            onValueChange={async (v) => {
+              if (v && !(await mintaKebenaran())) {
+                setKebenaran(false);
+                Alert.alert('Kebenaran diperlukan', 'Benarkan notifikasi untuk BursaEdge dalam tetapan telefon.');
+                return;
+              }
+              setPr({ aktif: v });
+            }}
+            trackColor={{ true: warna.bullish, false: warna.garis }}
+          />
+        </View>
+        <Text style={[st.nota, { color: warna.teksLemah }]}>
+          Seterusnya — Beli: {keadaanP.beliRingkas ?? 'tiada'} · Jual: {keadaanP.jualRingkas ?? 'tiada'}
+          {keadaanP.langsungInfo ? `\nHarga langsung terakhir: ${keadaanP.langsungInfo}` : ''}
+        </Text>
+
+        <Text style={[st.sub, { marginTop: 12 }]}>Peringatan beli untuk</Text>
+        <View style={st.cipBaris}>
+          <Cip teks="Semua cadangan BELI" aktif={pr.skop === 'semua'} tekan={() => setPr({ skop: 'semua' })} />
+          <Cip teks="Rekod ≥ +1R sahaja" aktif={pr.skop === 'rekod'} tekan={() => setPr({ skop: 'rekod' })} />
+          <Cip teks="Pilihan Saya sahaja" aktif={pr.skop === 'pilihan'} tekan={() => setPr({ skop: 'pilihan' })} />
+        </View>
+        {data ? (
+          <Text style={st.nota}>
+            Rekod cadangan BELI sekarang:{' '}
+            {SEMUA_HORIZON.map((h) => {
+              const b = data.horizon?.[h]?.prestasi_cadangan?.beli;
+              return `${INFO_HORIZON[h].label} ${b?.n ? `${b.purata_r! > 0 ? '+' : ''}${b.purata_r}R` : '—'}${rekodKuat(data, h) ? ' ⭐' : ''}`;
+            }).join(' · ')}
+            . "Rekod ≥ +1R" hanya mengingatkan horizon bertanda ⭐.
+          </Text>
+        ) : null}
+        <Text style={st.sub}>Horizon</Text>
+        <View style={st.cipBaris}>
+          {SEMUA_HORIZON.map((h) => (
+            <Cip
+              key={h}
+              teks={INFO_HORIZON[h].label}
+              aktif={pr.horizon.includes(h)}
+              tekan={() => {
+                const n = togol<Horizon>(pr.horizon, h);
+                if (n.length) setPr({ horizon: n });
+              }}
+            />
+          ))}
+        </View>
+        <Text style={st.sub}>Masa peringatan beli</Text>
+        <View style={st.cipBaris}>
+          {['08:45', '09:00', '09:15', '09:30'].map((m) => (
+            <Cip key={m} teks={fmtJam(m)} aktif={pr.masaBeli === m} tekan={() => setPr({ masaBeli: m })} />
+          ))}
+        </View>
+        <Text style={st.sub}>Masa peringatan jual</Text>
+        <View style={st.cipBaris}>
+          {['16:00', '16:15', '16:30', '16:40'].map((m) => (
+            <Cip key={m} teks={fmtJam(m)} aktif={pr.masaJual === m} tekan={() => setPr({ masaJual: m })} />
+          ))}
+        </View>
+        <Text style={st.sub}>Ingatkan jual apabila untung mencapai</Text>
+        <View style={st.cipBaris}>
+          {[1, 1.5, 2].map((r) => (
+            <Cip key={r} teks={`+${r}R`} aktif={pr.ambangR === r} tekan={() => setPr({ ambangR: r })} />
+          ))}
+        </View>
+        <Text style={st.nota}>
+          Peringatan jual juga dihantar pada hari terakhir tempoh pegangan dan apabila henti rugi atau sasaran disentuh. Harga langsung daripada Yahoo lewat ±15 minit.
+        </Text>
+        <View style={st.baris}>
+          <View style={{ flex: 1 }}>
+            <Text style={st.teks}>Mod penggera (paling tepat masa)</Text>
+            <Text style={st.nota}>Telefon tidak menangguhkan peringatan untuk jimat bateri. Ikon penggera muncul di bar status.</Text>
+          </View>
+          <Switch value={pr.penggera} onValueChange={(v) => setPr({ penggera: v })} trackColor={{ true: warna.bullish, false: warna.garis }} />
+        </View>
+        <Butang
+          jenis="kedua"
+          teks="Uji peringatan (tiba dalam 1 minit)"
+          tekan={async () => {
+            if (!(await mintaKebenaran())) {
+              setKebenaran(false);
+              Alert.alert('Kebenaran diperlukan', 'Benarkan notifikasi untuk BursaEdge dalam tetapan telefon.');
+              return;
+            }
+            const jam = await ujiPeringatan(60);
+            muatKeadaan();
+            Alert.alert('Dijadualkan', `Peringatan ujian akan tiba pada ${jam}. Anda boleh kunci skrin atau tutup app untuk mengujinya.`);
+          }}
+        />
+      </Kad>
+
+      <Text style={st.label}>Modal & kos moomoo</Text>
+      <Kad>
+        <Text style={st.sub}>Modal bagi setiap dagangan</Text>
+        <View style={st.cipBaris}>
+          {[1000, 2000, 5000, 10000, 20000, 50000].map((m) => (
+            <Cip key={m} teks={`RM${m.toLocaleString('en-MY')}`} aktif={kos.modal === m} tekan={() => setKos({ modal: m })} />
+          ))}
+        </View>
+        <TextInput
+          defaultValue={String(kos.modal)}
+          keyboardType="number-pad"
+          onEndEditing={(e) => {
+            const n = Math.round(Number(e.nativeEvent.text.replace(/[^0-9.]/g, '')));
+            if (n >= 100) setKos({ modal: n });
+          }}
+          placeholder="Jumlah lain (RM)"
+          placeholderTextColor={warna.teksMalap}
+          style={st.input}
+        />
+        <Text style={st.sub}>Komisen moomoo</Text>
+        <View style={st.cipBaris}>
+          <Cip teks="0.03% (biasa)" aktif={!kos.komisenPercuma} tekan={() => setKos({ komisenPercuma: false, komisenPeratus: 0.03 })} />
+          <Cip teks="RM0 (promosi)" aktif={kos.komisenPercuma} tekan={() => setKos({ komisenPercuma: true })} />
+        </View>
+        {(() => {
+          const s1 = kosSebelah(kos.modal, kos);
+          const a = anggar(unitUntukModal(kos.modal, 1), 1, 1, kos);
+          return (
+            <Text style={st.nota}>
+              Bagi pesanan RM{kos.modal.toLocaleString('en-MY')}: komisen RM{s1.komisen.toFixed(2)} + yuran platform RM{s1.platform.toFixed(2)} + yuran penjelasan Bursa 0.03% RM
+              {s1.penjelasan.toFixed(2)} + duti setem (RM1 setiap RM1,000) RM{s1.setem.toFixed(2)} = RM{s1.jumlah.toFixed(2)} sehala
+              {a ? `, ±RM${a.kos.toFixed(2)} beli + jual (${((a.kos / kos.modal) * 100).toFixed(2)}% daripada modal)` : ''}. REIT dikenakan SST 8% atas komisen & yuran platform. Kadar
+              boleh berubah — semak jadual yuran rasmi moomoo.
+            </Text>
+          );
+        })()}
       </Kad>
 
       <Text style={st.label}>Tempoh pemantauan</Text>

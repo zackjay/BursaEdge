@@ -5,6 +5,9 @@ import { INFO_HORIZON } from './tema';
 
 export const SALURAN_PENEMUAN = 'penemuan';
 export const SALURAN_SISTEM = 'sistem';
+export const SALURAN_PERINGATAN = 'peringatan';
+export const ID_BELI = 'be-peringatan-beli';
+export const ID_JUAL = 'be-peringatan-jual';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -22,6 +25,12 @@ export async function sediaSaluran() {
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 200, 120, 200],
     lightColor: '#22C55E',
+  });
+  await Notifications.setNotificationChannelAsync(SALURAN_PERINGATAN, {
+    name: 'Peringatan beli & jual',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 300, 150, 300, 150, 300],
+    lightColor: '#4C8DFF',
   });
   await Notifications.setNotificationChannelAsync(SALURAN_SISTEM, {
     name: 'Status pemantauan',
@@ -87,6 +96,28 @@ export async function hantarPenemuan(item: Penemuan[], tarikh: string) {
 export async function hantarSistem(tajuk: string, badan: string, tab = 'ranking') {
   if (!(await kebenaranAda())) return;
   await papar(tajuk, badan, { tab }, SALURAN_SISTEM);
+}
+
+/** Jadualkan (atau ganti) peringatan pada masa tepat. `bila` dalam ms epoch. */
+export async function jadualPada(id: string, bila: number, tajuk: string, badan: string, penggera: boolean) {
+  await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+  await Notifications.scheduleNotificationAsync({
+    identifier: id,
+    content: { title: tajuk, body: badan, data: { tab: 'cadangan' }, sound: true },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: bila,
+      channelId: SALURAN_PERINGATAN,
+      ...(penggera ? { delivery: 'alarmClock' as const } : {}),
+    },
+  });
+}
+
+export const batalJadual = (id: string) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+
+export async function hantarPeringatan(tajuk: string, badan: string) {
+  if (!(await kebenaranAda())) return;
+  await papar(tajuk, badan, { tab: 'cadangan' }, SALURAN_PERINGATAN);
 }
 
 export async function hantarVersiBaru(versi: string, bina: number, url: string) {

@@ -1,4 +1,4 @@
-# BursaEdge v3.1 — Analisa Bursa Malaysia (Android + iOS)
+# BursaEdge v3.2 — Analisa Bursa Malaysia (Android + iOS)
 
 Enjin analisa yang berjalan **sendiri setiap hari bekerja** di GitHub Actions, menyenaraikan
 **Top 10 Bullish** dan **Top 10 Bearish** bagi tiga jenis pedagang, belajar daripada ketepatan
@@ -64,6 +64,32 @@ Pegangan maksimum: Harian 2, Mingguan 15, Bulanan 42 hari dagangan.
 - **Pilih untuk dagangan**: simpan saham ke *Pilihan Saya* untuk Harian/Mingguan/Bulanan dengan
   pelan cadangan (atau pelan berasaskan ATR). App memaklumkan apabila harga tutup mencapai sasaran,
   henti rugi atau tempoh pegangan tamat. Pilihan disimpan dalam telefon sahaja.
+
+## Peringatan beli & jual (v3.2)
+
+Peringatan dijadualkan dalam telefon pada masa tepat (waktu Malaysia), walaupun app ditutup:
+
+- **Beli — 9:15 pg** (boleh ubah): senarai cadangan BELI sesi itu dengan zon masuk, henti rugi dan
+  sasaran; juga saham yang patut dijual kerana sasaran/henti rugi dicapai pada tutup semalam.
+  Jika data analisa tiba selepas 9:15 pg, peringatan dihantar sebaik data diterima (sebelum 4 ptg).
+- **Jual — 4:30 ptg** (boleh ubah), sebelum dagangan berterusan tamat 4:45 ptg: dihantar apabila
+  saham yang dipantau **untung ≥ +1R**, menyentuh sasaran atau henti rugi, atau berada pada
+  **hari terakhir tempoh pegangan**.
+- **Amaran serta-merta** apabila harga langsung mencapai ambang untung (sekali sehari setiap saham).
+- Skop: semua cadangan BELI, hanya horizon yang rekodnya purata ≥ +1R (⭐), atau Pilihan Saya sahaja.
+
+Harga langsung diambil terus dari Yahoo Finance oleh telefon (lewat ±15 minit) setiap kali semakan
+latar belakang berjalan (±30 minit, tidak dijamin oleh Android) atau app dibuka. Tanpa harga
+langsung, peringatan menggunakan harga tutup terakhir. Cuti umum Bursa tidak dikenali — peringatan
+tetap dihantar pada hari bekerja.
+
+## Anggaran untung/rugi bersih (kos moomoo)
+
+Setiap cadangan dan Pilihan Saya memaparkan untung/rugi **bersih** bagi modal yang anda tetapkan
+(lalai RM5,000 setiap dagangan, lot 100 unit) selepas kos beli + jual moomoo Malaysia: komisen
+0.03%, yuran platform RM3 setiap pesanan, yuran penjelasan Bursa 0.03% (maks RM1,000), duti setem
+RM1 setiap RM1,000 atau sebahagiannya (maks RM1,000; REIT RM200), SST 8% atas komisen & yuran
+platform untuk REIT. Kadar boleh diubah dalam Tetapan; semak jadual yuran rasmi moomoo.
 
 ## Tempoh pemantauan → notifikasi
 

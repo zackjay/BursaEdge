@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { DataTerkini, Horizon, PelanCadangan, PilihanSaya, SEMUA_HORIZON, Tetapan } from '../jenis';
+import { DataTerkini, Horizon, PelanCadangan, PilihanSaya, SEMUA_HORIZON, Tetapan, TetapanKos } from '../jenis';
 import { Kad, Kosong, Segmen } from '../komponen';
+import { anggar, fmtRMx, unitUntukModal } from '../kos';
+import { kebenaranAda } from '../notifikasi';
 import { hariDipegang, LABEL_STATUS, untungPeratus } from '../pelan';
+import { fmtJam, minitMYT, tarikhMYT } from '../peringatanLogik';
+import { CacheLangsung, KeadaanPeringatan } from '../storan';
 import { fmtHarga, fmtPeratus, fmtTarikh, INFO_HORIZON, warna } from '../tema';
 
 interface Props {
@@ -16,12 +20,20 @@ interface Props {
   buangPilihan: (id: string) => void;
   bukaSaham: (ticker: string, h: Horizon) => void;
   bukaPrestasi: () => void;
+  langsung: CacheLangsung['harga'];
+  keadaanP: KeadaanPeringatan;
+  keTetapan: () => void;
 }
 
 const WARNA_GRED: Record<string, string> = { A: warna.bullish, B: warna.aksen, C: warna.teksLemah };
 
-export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pilihan, tambahPilihan, buangPilihan, bukaSaham, bukaPrestasi }: Props) {
+export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pilihan, tambahPilihan, buangPilihan, bukaSaham, bukaPrestasi, langsung, keadaanP, keTetapan }: Props) {
   const [h, setH] = useState<Horizon>(tetapan.jenisUtama);
+  const [izin, setIzin] = useState(true);
+  useEffect(() => {
+    kebenaranAda().then(setIzin);
+  }, [keadaanP]);
+  const kos = tetapan.kos;
   useEffect(() => setH(tetapan.jenisUtama), [tetapan.jenisUtama]);
 
   const dh = data?.horizon?.[h];
@@ -78,6 +90,19 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
         </Kad>
       ) : null}
 
+      <Pressable onPress={keTetapan} style={st.pitaP}>
+        {!tetapan.peringatan.aktif ? (
+          <Text style={st.pitaPTeks}>🔕 Peringatan beli & jual dimatikan — tekan untuk hidupkan</Text>
+        ) : !izin ? (
+          <Text style={[st.pitaPTeks, { color: warna.amaran }]}>🔔 Benarkan notifikasi dalam Tetapan supaya peringatan beli & jual boleh dihantar</Text>
+        ) : (
+          <Text style={st.pitaPTeks}>
+            🔔 Beli: {keadaanP.beliRingkas ?? 'tiada dijadualkan'}
+            {'\n'}🔔 Jual: {keadaanP.jualRingkas ?? `tiada (dihantar ${fmtJam(tetapan.peringatan.masaJual)} jika untung ≥ +${tetapan.peringatan.ambangR}R atau hari terakhir)`}
+          </Text>
+        )}
+      </Pressable>
+
       <Segmen pilihan={SEMUA_HORIZON} nilai={h} tukar={setH} label={(x) => INFO_HORIZON[x].label} sub={(x) => INFO_HORIZON[x].pegangan} />
 
       {!data ? (
@@ -99,7 +124,7 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
           {cad.beli.length ? (
             cad.beli.map((c) => {
               const dipilih = pilihan.some((p) => p.ticker === c.ticker && p.horizon === h && p.status === 'aktif');
-              return <KadCadangan key={c.ticker} c={c} dipilih={dipilih} buka={() => bukaSaham(c.ticker, h)} pilih={() => pilih(c)} />;
+              return <KadCadangan key={c.ticker} c={c} kos={kos} dipilih={dipilih} buka={() => bukaSaham(c.ticker, h)} pilih={() => pilih(c)} />;
             })
           ) : (
             <Kosong tajuk="Tiada cadangan beli hari ini" teks="Tiada saham memenuhi semua syarat. Kadang-kadang tidak berdagang adalah keputusan terbaik." />
@@ -135,6 +160,8 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
               <KadPilihan
                 key={p.id}
                 p={p}
+                kos={kos}
+                hl={langsung[p.ticker]}
                 hari={hariDipegang(p, data)}
                 buka={() => bukaSaham(p.ticker, h)}
                 buang={() =>
@@ -200,7 +227,11 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
   );
 }
 
-function KadCadangan({ c, dipilih, buka, pilih }: { c: PelanCadangan; dipilih: boolean; buka: () => void; pilih: () => void }) {
+function KadCadangan({ c, kos, dipilih, buka, pilih }: { c: PelanCadangan; kos: TetapanKos; dipilih: boolean; buka: () => void; pilih: () => void }) {
+  const reit = c.sektor === 'REIT';
+  const unit = unitUntukModal(kos.modal, c.harga);
+  const aS = anggar(unit, c.harga, c.sasaran, kos, reit);
+  const aH = anggar(unit, c.harga, c.henti_rugi, kos, reit);
   return (
     <Pressable onPress={buka} style={({ pressed }) => [st.kad, pressed && { backgroundColor: warna.kadTinggi }]}>
       <View style={st.baris}>
@@ -226,6 +257,18 @@ function KadCadangan({ c, dipilih, buka, pilih }: { c: PelanCadangan; dipilih: b
         <Sel label="Sasaran" nilai={fmtHarga(c.sasaran)} sub={`+${c.ganjaran_peratus}%`} w={warna.bullish} />
         <Sel label="Nisbah" nilai={`1:${c.nisbah_rr.toFixed(1)}`} />
       </View>
+      {aS && aH ? (
+        <View style={st.anggar}>
+          <Text style={st.kecil}>
+            Modal RM{kos.modal.toLocaleString('en-MY')} → {unit} unit (RM{aS.nilaiBeli.toFixed(0)}) · kos moomoo beli+jual ≈ RM{aS.kos.toFixed(2)}
+          </Text>
+          <Text style={st.anggarTeks}>
+            Bersih: sasaran <Text style={{ color: warna.bullish }}>{fmtRMx(aS.bersih)}</Text> · henti rugi <Text style={{ color: warna.bearish }}>{fmtRMx(aH.bersih)}</Text>
+          </Text>
+        </View>
+      ) : (
+        <Text style={[st.kecil, { marginTop: 8 }]}>Modal RM{kos.modal} tidak cukup untuk 1 lot (100 unit) saham ini.</Text>
+      )}
       {c.alasan.length ? (
         <Text style={st.alasan} numberOfLines={2}>
           {c.alasan.slice(0, 2).join(' · ')}
@@ -252,9 +295,13 @@ function KadCadangan({ c, dipilih, buka, pilih }: { c: PelanCadangan; dipilih: b
   );
 }
 
-function KadPilihan({ p, hari, buka, buang }: { p: PilihanSaya; hari: number; buka: () => void; buang: () => void }) {
-  const u = untungPeratus(p);
-  const kini = p.harga_semasa ?? p.harga_masuk;
+function KadPilihan({ p, kos, hl, hari, buka, buang }: { p: PilihanSaya; kos: TetapanKos; hl?: CacheLangsung['harga'][string]; hari: number; buka: () => void; buang: () => void }) {
+  const adaLangsung = !!hl && p.status === 'aktif' && tarikhMYT(hl.masa * 1000) === tarikhMYT(Date.now()) && tarikhMYT(hl.masa * 1000) > (p.tarikh_semasa ?? '');
+  const kini = adaLangsung ? hl!.harga : p.harga_semasa ?? p.harga_masuk;
+  const u = adaLangsung ? ((kini - p.harga_masuk) / p.harga_masuk) * 100 : untungPeratus(p);
+  const r = (kini - p.harga_masuk) / (p.harga_masuk - p.henti_rugi || 1);
+  const m = adaLangsung ? minitMYT(hl!.masa * 1000) : 0;
+  const a = anggar(unitUntukModal(kos.modal, p.harga_masuk), p.harga_masuk, kini, kos);
   const kedudukan = Math.max(0, Math.min(1, (kini - p.henti_rugi) / (p.sasaran - p.henti_rugi || 1)));
   const masuk = Math.max(0, Math.min(1, (p.harga_masuk - p.henti_rugi) / (p.sasaran - p.henti_rugi || 1)));
   const wStatus = p.status === 'sasaran' ? warna.bullish : p.status === 'henti' ? warna.bearish : p.status === 'tamat' ? warna.amaran : warna.aksen;
@@ -284,10 +331,17 @@ function KadPilihan({ p, hari, buka, buang }: { p: PilihanSaya; hari: number; bu
       <View style={st.baris}>
         <Text style={[st.kecil, { color: warna.bearish }]}>Henti {fmtHarga(p.henti_rugi)}</Text>
         <Text style={[st.kecil, { flex: 1, textAlign: 'center' }]}>
-          Masuk {fmtHarga(p.harga_masuk)} → kini {fmtHarga(kini)}
+          Masuk {fmtHarga(p.harga_masuk)} → {adaLangsung ? `langsung ${fmtJam(`${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`)}` : 'tutup'} {fmtHarga(kini)}
         </Text>
         <Text style={[st.kecil, { color: warna.bullish }]}>Sasaran {fmtHarga(p.sasaran)}</Text>
       </View>
+      {a ? (
+        <Text style={[st.kecil, { marginTop: 6 }]}>
+          {r >= 0 ? '+' : ''}
+          {r.toFixed(1)}R · jika jual sekarang ({a.unit} unit): <Text style={{ color: a.bersih >= 0 ? warna.bullish : warna.bearish, fontWeight: '800' }}>{fmtRMx(a.bersih)}</Text> bersih selepas kos RM
+          {a.kos.toFixed(2)}
+        </Text>
+      ) : null}
       <Pressable onPress={buang} hitSlop={8} style={{ alignSelf: 'flex-end', marginTop: 6 }}>
         <Text style={[st.kecil, { color: warna.teksMalap }]}>Buang</Text>
       </Pressable>
@@ -326,6 +380,10 @@ const st = StyleSheet.create({
   label: { color: warna.teksLemah, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, marginTop: 4 },
   nota: { backgroundColor: warna.amaranLatar, borderRadius: 10, padding: 10, marginBottom: 8 },
   notaTeks: { color: warna.amaran, fontSize: 12, lineHeight: 17 },
+  pitaP: { backgroundColor: warna.kad, borderWidth: 1, borderColor: warna.garis, borderRadius: 10, padding: 10, marginBottom: 10 },
+  pitaPTeks: { color: warna.teksLemah, fontSize: 12, lineHeight: 18 },
+  anggar: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: warna.garis },
+  anggarTeks: { color: warna.teks, fontSize: 13, fontWeight: '700', marginTop: 2 },
   kad: { backgroundColor: warna.kad, borderRadius: 14, borderWidth: 1, borderColor: warna.garis, padding: 12, marginBottom: 10 },
   baris: { flexDirection: 'row', alignItems: 'center' },
   gred: { width: 34, height: 34, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 10 },

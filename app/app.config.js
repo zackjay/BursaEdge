@@ -6,7 +6,7 @@ module.exports = () => ({
   expo: {
     name: 'BursaEdge',
     slug: 'bursaedge',
-    version: '3.1.0',
+    version: '3.2.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -33,7 +33,13 @@ module.exports = () => ({
         foregroundImage: './assets/android-icon-foreground.png',
         monochromeImage: './assets/android-icon-monochrome.png',
       },
-      permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.RECEIVE_BOOT_COMPLETED'],
+      permissions: [
+        'android.permission.POST_NOTIFICATIONS',
+        'android.permission.RECEIVE_BOOT_COMPLETED',
+        // Peringatan beli/jual pada masa tepat (app tidak diedar melalui Play Store)
+        'android.permission.USE_EXACT_ALARM',
+        'android.permission.SCHEDULE_EXACT_ALARM',
+      ],
       predictiveBackGestureEnabled: false,
     },
     plugins: [

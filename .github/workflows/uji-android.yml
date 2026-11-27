@@ -59,6 +59,17 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/ujian-log"
           ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64 2>&1 | tee "$GITHUB_WORKSPACE/ujian-log/gradle.txt" | tail -60
 
+      - name: Diagnostik harga langsung Yahoo
+        run: |
+          mkdir -p ujian-log
+          UA="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36"
+          for T in 5246.KL 1155.KL; do
+            curl -s -m 20 -A "$UA" -w "\nHTTP %{http_code}\n" "https://query1.finance.yahoo.com/v8/finance/chart/$T?range=1d&interval=5m" \
+              | python3 -c "import sys,json; t=sys.stdin.read(); i=t.rfind('HTTP'); print(t[i:].strip()); m=json.loads(t[:i])['chart']['result'][0]['meta']; print({k:m.get(k) for k in ('symbol','regularMarketPrice','regularMarketTime','regularMarketDayHigh','regularMarketDayLow','chartPreviousClose')})" \
+              >> ujian-log/yahoo.txt 2>&1 || echo "gagal $T" >> ujian-log/yahoo.txt
+          done
+          cat ujian-log/yahoo.txt
+
       - name: Hidupkan KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

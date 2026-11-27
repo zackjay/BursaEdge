@@ -31,6 +31,8 @@ export const TETAPAN_ASAS: Tetapan = {
   maklumSemasaPemantauan: false,
   repo: extra.dataRepo ?? '',
   cawangan: extra.cawangan || 'main',
+  peringatan: { aktif: true, skop: 'semua', horizon: ['harian', 'mingguan', 'musiman'], masaBeli: '09:15', masaJual: '16:30', ambangR: 1, penggera: true },
+  kos: { modal: 5000, komisenPeratus: 0.03, yuranPlatform: 3, komisenPercuma: false },
 };
 
 async function bacaJson<T>(kunci: string, lalai: T): Promise<T> {
@@ -44,7 +46,12 @@ async function bacaJson<T>(kunci: string, lalai: T): Promise<T> {
 
 export async function bacaTetapan(): Promise<Tetapan> {
   const t = await bacaJson<Partial<Tetapan>>(K.tetapan, {});
-  const gabung = { ...TETAPAN_ASAS, ...t };
+  const gabung = {
+    ...TETAPAN_ASAS,
+    ...t,
+    peringatan: { ...TETAPAN_ASAS.peringatan, ...(t.peringatan ?? {}) },
+    kos: { ...TETAPAN_ASAS.kos, ...(t.kos ?? {}) },
+  };
   if (!gabung.repo && extra.dataRepo) gabung.repo = extra.dataRepo;
   return gabung;
 }
@@ -94,3 +101,27 @@ export const simpanBinaDimaklum = (n: number) => AsyncStorage.setItem('be.bina_d
 
 export const bacaPilihan = () => bacaJson<PilihanSaya[]>(K.pilihan, []);
 export const simpanPilihan = (p: PilihanSaya[]) => AsyncStorage.setItem(K.pilihan, JSON.stringify(p));
+
+// Keadaan peringatan beli/jual & harga langsung
+export interface KeadaanPeringatan {
+  beliDimaklum: string[]; // tarikh data yang peringatan belinya dijadual/dihantar
+  beliUntuk?: string; // sesi (tarikh) peringatan beli terakhir dijadual
+  beliRingkas?: string;
+  jualUntuk?: string;
+  jualRingkas?: string;
+  amaran?: { tarikh: string; kunci: string[] };
+  dikemas?: string;
+  langsungInfo?: string;
+}
+export const bacaKeadaanPeringatan = () => bacaJson<KeadaanPeringatan>('be.peringatan.v1', { beliDimaklum: [] });
+export const simpanKeadaanPeringatan = (k: KeadaanPeringatan) => AsyncStorage.setItem('be.peringatan.v1', JSON.stringify(k));
+
+export interface CacheLangsung {
+  diambil: number; // ms
+  harga: Record<string, { harga: number; masa: number; tinggi?: number | null; rendah?: number | null }>;
+}
+export const bacaLangsung = () => bacaJson<CacheLangsung>('be.langsung.v1', { diambil: 0, harga: {} });
+export const simpanLangsung = (c: CacheLangsung) => AsyncStorage.setItem('be.langsung.v1', JSON.stringify(c));
+
+export const bacaNombor = async (k: string) => Number((await AsyncStorage.getItem(k)) ?? 0);
+export const simpanNombor = (k: string, n: number) => AsyncStorage.setItem(k, String(n));

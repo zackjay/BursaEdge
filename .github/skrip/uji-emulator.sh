@@ -81,6 +81,7 @@ ke_depan() { didepan || { adb shell monkey -p "$PAKEJ" -c android.intent.categor
 
 echo "== Pasang APK"
 adb install -r "$APK" 2>&1 | tee ujian-log/pasang.txt
+adb shell pm grant "$PAKEJ" android.permission.POST_NOTIFICATIONS 2>&1 | tee -a ujian-log/langkah.txt
 adb logcat -c
 echo "== Lancar app"
 adb shell monkey -p "$PAKEJ" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
@@ -127,6 +128,17 @@ tekan_teks "Prestasi ›" tiada; langkah 22-prestasi 4
 adb shell input keyevent 4; sleep 2; ke_depan
 tekan_teks "Penemuan" tiada; langkah 23-penemuan 3
 tekan_teks "Tetapan" tiada; langkah 24-tetapan 3
+# Peringatan: kad tetapan, jadual sebenar (dumpsys alarm) dan penghantaran peringatan ujian
+tekan_teks "Ingatkan masa beli & jual"; langkah 25-peringatan 2
+tekan_teks "Uji peringatan (tiba dalam 1 minit)" && { sleep 2; adb exec-out screencap -p > ujian-log/26-uji-dijadual.png; tekan_teks "OK" tiada; }
+adb shell dumpsys alarm | grep -B2 -A12 "$PAKEJ" | head -120 > ujian-log/alarm.txt 2>&1
+adb shell dumpsys notification --noredact 2>/dev/null | grep -A3 "NotificationChannel{mId='peringatan'" | head -8 >> ujian-log/alarm.txt
+tekan_teks "Modal & kos moomoo"; langkah 27-kos 2
+adb shell input keyevent 3; sleep 75
+adb shell cmd statusbar expand-notifications; sleep 3
+adb exec-out screencap -p > ujian-log/28-notifikasi-ujian.png
+adb shell dumpsys notification --noredact 2>/dev/null | grep -E "android.title|android.text|android.bigText" | head -12 > ujian-log/notifikasi.txt
+adb shell cmd statusbar collapse; ke_depan
 
 adb logcat -d > ujian-log/logcat-penuh.txt
 grep -E "AndroidRuntime|FATAL|ReactNativeJS|ExceptionsManager|SoLoader|UnsatisfiedLink|Error:|Exception|$PAKEJ" ujian-log/logcat-penuh.txt \

@@ -4,7 +4,10 @@ import { DataTerkini, Horizon, Penemuan, SEMUA_HORIZON, Sisi, Tetapan } from './
 import { adaVersiBaru, semakVersi } from './kemaskini';
 import { hantarPenemuan, hantarSistem, hantarVersiBaru } from './notifikasi';
 import { kemaskiniPilihan, LABEL_STATUS, untungPeratus } from './pelan';
+import { jadualPeringatan } from './peringatan';
 import {
+  bacaNombor,
+  simpanNombor,
   bacaBinaDimaklum,
   simpanBinaDimaklum,
   bacaCache,
@@ -93,10 +96,14 @@ export async function semakSekarang(): Promise<HasilSemakan> {
 
   // Versi app baru? Maklumkan sekali sahaja bagi setiap bina
   try {
-    const v = await semakVersi(tetapan.repo);
-    if (adaVersiBaru(v) && v.bina > (await bacaBinaDimaklum())) {
-      await hantarVersiBaru(v.versi, v.bina, v.url);
-      await simpanBinaDimaklum(v.bina);
+    // Semak paling kerap sekali setiap 6 jam
+    if (Date.now() - (await bacaNombor('be.semak_versi.v1')) > 6 * 3600000) {
+      await simpanNombor('be.semak_versi.v1', Date.now());
+      const v = await semakVersi(tetapan.repo);
+      if (adaVersiBaru(v) && v.bina > (await bacaBinaDimaklum())) {
+        await hantarVersiBaru(v.versi, v.bina, v.url);
+        await simpanBinaDimaklum(v.bina);
+      }
     }
   } catch {
     // abaikan — semakan versi tidak kritikal
@@ -108,6 +115,7 @@ export async function semakSekarang(): Promise<HasilSemakan> {
     const h = await muatData(tetapan, await bacaToken(), lama ? await bacaEtag() : '');
     if (h.tidakBerubah && lama) {
       await simpanSemakanTerakhir(kini);
+      await jadualPeringatan(lama).catch(() => {});
       return { data: lama, tetapan, dimaklum: 0, dataBaru: false };
     }
     data = h.data!;
@@ -171,5 +179,6 @@ export async function semakSekarang(): Promise<HasilSemakan> {
     }
     await simpanTarikhDimaklum(data.tarikh_data);
   }
+  await jadualPeringatan(data).catch(() => {});
   return { data, tetapan, dimaklum, dataBaru };
 }

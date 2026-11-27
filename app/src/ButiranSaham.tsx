@@ -5,6 +5,7 @@ import { muatCarta } from './data';
 import GrafHarga, { labelMasa } from './GrafHarga';
 import { DataCarta, DataTerkini, Horizon, KunciJulat, PilihanSaya, SEMUA_HORIZON, Tetapan } from './jenis';
 import { Butang, Kad } from './komponen';
+import { anggar, fmtRMx, pulangModalPeratus, unitUntukModal } from './kos';
 import { cariCadangan, rancangPelan } from './pelan';
 import { bacaToken } from './storan';
 import { fmtHarga, fmtJuta, fmtPeratus, fmtTarikh, INFO_HORIZON, warna } from './tema';
@@ -244,6 +245,33 @@ export default function ButiranSaham({ ticker, horizonAwal, data, tetapan, pilih
                   {pelan.dariCadangan ? `Daripada cadangan ${INFO_HORIZON[hPilih].label} (gred ${pelan.gred}). ` : 'Dikira daripada turun naik harga (ATR). '}
                   Pegangan maksimum {pelan.pegangan} hari dagangan. Status dikemas kini setiap hari berdasarkan harga tutup.
                 </Text>
+                {(() => {
+                  const reit = saham?.sektor === 'REIT';
+                  const unit = unitUntukModal(tetapan.kos.modal, pelan.masuk);
+                  const aS = anggar(unit, pelan.masuk, pelan.sasaran, tetapan.kos, reit);
+                  const aH = anggar(unit, pelan.masuk, pelan.henti, tetapan.kos, reit);
+                  if (!aS || !aH) return <Text style={st.nota}>Modal RM{tetapan.kos.modal} tidak cukup untuk 1 lot (100 unit).</Text>;
+                  return (
+                    <View style={st.kotakKos}>
+                      <Text style={st.kosTajuk}>
+                        Anggaran dengan modal RM{tetapan.kos.modal.toLocaleString('en-MY')} · {unit} unit ({aS.lot} lot) = RM{aS.nilaiBeli.toFixed(2)}
+                      </Text>
+                      <Text style={st.kosBaris}>
+                        Jika capai sasaran: <Text style={{ color: warna.bullish, fontWeight: '800' }}>{fmtRMx(aS.bersih)}</Text> bersih ({aS.bersihPeratus > 0 ? '+' : ''}
+                        {aS.bersihPeratus}%) · kasar {fmtRMx(aS.kasar)}
+                      </Text>
+                      <Text style={st.kosBaris}>
+                        Jika kena henti rugi: <Text style={{ color: warna.bearish, fontWeight: '800' }}>{fmtRMx(aH.bersih)}</Text> bersih ({aH.bersihPeratus}%) · kasar {fmtRMx(aH.kasar)}
+                      </Text>
+                      <Text style={st.nota}>
+                        Kos moomoo semasa beli RM{aS.kosBeli.jumlah.toFixed(2)}: komisen {aS.kosBeli.komisen.toFixed(2)} + platform {aS.kosBeli.platform.toFixed(2)} + penjelasan{' '}
+                        {aS.kosBeli.penjelasan.toFixed(2)} + duti setem {aS.kosBeli.setem.toFixed(2)}
+                        {aS.kosBeli.sst ? ` + SST ${aS.kosBeli.sst.toFixed(2)}` : ''}. Semasa jual di sasaran RM{aS.kosJual.jumlah.toFixed(2)}. Pulang modal perlukan kenaikan{' '}
+                        {pulangModalPeratus(unit, pelan.masuk, tetapan.kos, reit)}%. Anggaran sahaja — ubah modal & kadar dalam Tetapan.
+                      </Text>
+                    </View>
+                  );
+                })()}
                 {statusH?.sisi === 'bearish' ? (
                   <Text style={[st.nota, { color: warna.amaran }]}>
                     Amaran: saham ini dalam ranking Bearish {INFO_HORIZON[hPilih].label} #{statusH.kedudukan}.
@@ -359,6 +387,9 @@ const st = StyleSheet.create({
   tajuk: { color: warna.teksLemah, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, marginTop: 6 },
   kadStatus: { flex: 1, backgroundColor: warna.kad, borderWidth: 1, borderColor: warna.garis, borderRadius: 12, padding: 10, gap: 3 },
   statusTeks: { fontSize: 13, fontWeight: '800' },
+  kotakKos: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: warna.garis },
+  kosTajuk: { color: warna.teksLemah, fontSize: 12, marginBottom: 4 },
+  kosBaris: { color: warna.teks, fontSize: 13, lineHeight: 20 },
   cadTajuk: { fontSize: 14, fontWeight: '800' },
   parasNilai: { color: warna.teks, fontSize: 16, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
   infoNilai: { color: warna.teks, fontSize: 14, fontWeight: '700', marginTop: 2, fontVariant: ['tabular-nums'] },

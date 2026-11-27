@@ -9,6 +9,7 @@ import { adaVersiBaru, InfoVersi, semakVersi } from './src/kemaskini';
 import { daftarTugas } from './src/latarBelakang';
 import { sediaSaluran } from './src/notifikasi';
 import { kemaskiniPilihan } from './src/pelan';
+import { jadualPeringatan } from './src/peringatan';
 import { semakSekarang, tapisPenemuan } from './src/semak';
 import CadanganSkrin from './src/skrin/Cadangan';
 import Mula from './src/skrin/Mula';
@@ -17,7 +18,7 @@ import Prestasi from './src/skrin/Prestasi';
 import Ranking from './src/skrin/Ranking';
 import SahamSkrin from './src/skrin/Saham';
 import TetapanSkrin from './src/skrin/Tetapan';
-import { bacaCache, bacaLog, bacaPilihan, bacaTetapan, simpanKeputusanDimaklum, simpanPilihan, simpanTetapan } from './src/storan';
+import { bacaCache, bacaKeadaanPeringatan, bacaLangsung, bacaLog, bacaPilihan, bacaTetapan, CacheLangsung, KeadaanPeringatan, simpanKeputusanDimaklum, simpanPilihan, simpanTetapan } from './src/storan';
 import { warna } from './src/tema';
 
 type Tab = 'cadangan' | 'ranking' | 'saham' | 'penemuan' | 'tetapan';
@@ -41,6 +42,12 @@ function Utama() {
   const [dibuka, setDibuka] = useState<{ ticker: string; h: Horizon } | null>(null);
   const [prestasiBuka, setPrestasiBuka] = useState(false);
   const [versiBaru, setVersiBaru] = useState<InfoVersi | null>(null);
+  const [langsung, setLangsung] = useState<CacheLangsung['harga']>({});
+  const [keadaanP, setKeadaanP] = useState<KeadaanPeringatan>({ beliDimaklum: [] });
+  const muatKeadaan = useCallback(async () => {
+    setLangsung((await bacaLangsung()).harga);
+    setKeadaanP(await bacaKeadaanPeringatan());
+  }, []);
   const sedangSemak = useRef(false);
 
   const semak = useCallback(async () => {
@@ -54,6 +61,7 @@ function Utama() {
       setRalat(h.ralat);
       setLog(await bacaLog());
       setPilihan(await bacaPilihan());
+      await muatKeadaan();
     } finally {
       sedangSemak.current = false;
       setMemuat(false);
@@ -96,6 +104,7 @@ function Utama() {
       setTetapan(baru);
       await simpanTetapan(baru);
       if (patch.fasa === 'pemantauan') await simpanKeputusanDimaklum(false);
+      if (patch.peringatan) jadualPeringatan().then(muatKeadaan).catch(() => {});
       if (patch.repo !== undefined || patch.cawangan !== undefined) semak();
     },
     [tetapan, semak]
@@ -108,15 +117,17 @@ function Utama() {
       if (data) baru = kemaskiniPilihan(baru, data).senarai;
       setPilihan(baru);
       await simpanPilihan(baru);
+      jadualPeringatan().then(muatKeadaan).catch(() => {});
     },
-    [data]
+    [data, muatKeadaan]
   );
 
   const buangPilihan = useCallback(async (id: string) => {
     const baru = (await bacaPilihan()).filter((x) => x.id !== id);
     setPilihan(baru);
     await simpanPilihan(baru);
-  }, []);
+    jadualPeringatan().then(muatKeadaan).catch(() => {});
+  }, [muatKeadaan]);
 
   const bukaSaham = useCallback((ticker: string, h: Horizon) => setDibuka({ ticker, h }), []);
 
@@ -170,6 +181,9 @@ function Utama() {
             buangPilihan={buangPilihan}
             bukaSaham={bukaSaham}
             bukaPrestasi={() => setPrestasiBuka(true)}
+            langsung={langsung}
+            keadaanP={keadaanP}
+            keTetapan={() => setTab('tetapan')}
           />
         ) : null}
         {tab === 'ranking' ? (
@@ -187,7 +201,7 @@ function Utama() {
         ) : null}
         {tab === 'saham' ? <SahamSkrin data={data} tetapan={tetapan} memuat={memuat} muatSemula={semak} pilihan={pilihan} bukaSaham={bukaSaham} /> : null}
         {tab === 'penemuan' ? <Penemuan data={data} log={log} tetapan={tetapan} memuat={memuat} muatSemula={semak} bukaSaham={bukaSaham} /> : null}
-        {tab === 'tetapan' ? <TetapanSkrin tetapan={tetapan} data={data} kemaskini={kemaskini} muatSemula={semak} /> : null}
+        {tab === 'tetapan' ? <TetapanSkrin tetapan={tetapan} data={data} kemaskini={kemaskini} muatSemula={semak} keadaanP={keadaanP} muatKeadaan={muatKeadaan} /> : null}
       </View>
       <ButiranSaham
         ticker={dibuka?.ticker ?? null}

@@ -3,11 +3,13 @@
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { semakSekarang } from './semak';
+import { bacaNombor, simpanNombor } from './storan';
 
 export const TUGAS_SEMAK = 'bursaedge-semak-penemuan';
 // Data dikemas kini sekali sehari (~6:20 ptg). Android menghormati selang ini;
 // iOS menentukan sendiri masa larian berdasarkan penggunaan & bateri.
-const SELANG_MINIT = 60;
+const SELANG_MINIT = 30;
+const K_SELANG = 'be.selang_latar.v1';
 
 TaskManager.defineTask(TUGAS_SEMAK, async () => {
   try {
@@ -21,9 +23,15 @@ TaskManager.defineTask(TUGAS_SEMAK, async () => {
 export async function daftarTugas() {
   const status = await BackgroundTask.getStatusAsync();
   if (status !== BackgroundTask.BackgroundTaskStatus.Available) return false;
-  if (!(await TaskManager.isTaskRegisteredAsync(TUGAS_SEMAK))) {
+  const berdaftar = await TaskManager.isTaskRegisteredAsync(TUGAS_SEMAK);
+  if (berdaftar && (await bacaNombor(K_SELANG)) !== SELANG_MINIT) {
+    // Selang berubah antara versi — daftar semula
+    await BackgroundTask.unregisterTaskAsync(TUGAS_SEMAK).catch(() => {});
+    await BackgroundTask.registerTaskAsync(TUGAS_SEMAK, { minimumInterval: SELANG_MINIT });
+  } else if (!berdaftar) {
     await BackgroundTask.registerTaskAsync(TUGAS_SEMAK, { minimumInterval: SELANG_MINIT });
   }
+  await simpanNombor(K_SELANG, SELANG_MINIT);
   return true;
 }
 
