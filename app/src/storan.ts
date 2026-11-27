@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
-import { DataTerkini, LogPenemuan, Tetapan } from './jenis';
+import { DataTerkini, LogPenemuan, PilihanSaya, Tetapan } from './jenis';
 
 const K = {
   tetapan: 'be.tetapan.v1',
@@ -10,6 +10,8 @@ const K = {
   log: 'be.log_penemuan.v1',
   semakan: 'be.semakan_terakhir.v1',
   keputusanDimaklum: 'be.keputusan_dimaklum.v1',
+  etag: 'be.etag.latest.v1',
+  pilihan: 'be.pilihan_saya.v1',
 };
 const K_TOKEN = 'bursaedge_github_token';
 // Boleh dibaca oleh tugas latar belakang selepas telefon dibuka kunci sekali
@@ -83,3 +85,9 @@ export async function simpanToken(token: string) {
   if (token) await SecureStore.setItemAsync(K_TOKEN, token.trim(), OPSYEN_SS);
   else await SecureStore.deleteItemAsync(K_TOKEN, OPSYEN_SS);
 }
+
+export const bacaEtag = async () => (await AsyncStorage.getItem(K.etag)) ?? '';
+export const simpanEtag = (e: string) => AsyncStorage.setItem(K.etag, e);
+
+export const bacaPilihan = () => bacaJson<PilihanSaya[]>(K.pilihan, []);
+export const simpanPilihan = (p: PilihanSaya[]) => AsyncStorage.setItem(K.pilihan, JSON.stringify(p));

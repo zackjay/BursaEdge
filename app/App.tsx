@@ -1,25 +1,30 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DataTerkini, LogPenemuan, Tetapan } from './src/jenis';
+import ButiranSaham from './src/ButiranSaham';
+import { DataTerkini, Horizon, LogPenemuan, PilihanSaya, Tetapan } from './src/jenis';
 import { daftarTugas } from './src/latarBelakang';
 import { sediaSaluran } from './src/notifikasi';
+import { kemaskiniPilihan } from './src/pelan';
 import { semakSekarang, tapisPenemuan } from './src/semak';
+import CadanganSkrin from './src/skrin/Cadangan';
 import Mula from './src/skrin/Mula';
 import Penemuan from './src/skrin/Penemuan';
 import Prestasi from './src/skrin/Prestasi';
 import Ranking from './src/skrin/Ranking';
+import SahamSkrin from './src/skrin/Saham';
 import TetapanSkrin from './src/skrin/Tetapan';
-import { bacaCache, bacaLog, bacaTetapan, simpanKeputusanDimaklum, simpanTetapan } from './src/storan';
+import { bacaCache, bacaLog, bacaPilihan, bacaTetapan, simpanKeputusanDimaklum, simpanPilihan, simpanTetapan } from './src/storan';
 import { warna } from './src/tema';
 
-type Tab = 'ranking' | 'penemuan' | 'prestasi' | 'tetapan';
+type Tab = 'cadangan' | 'ranking' | 'saham' | 'penemuan' | 'tetapan';
 const TAB: { id: Tab; label: string; ikon: string }[] = [
+  { id: 'cadangan', label: 'Cadangan', ikon: '★' },
   { id: 'ranking', label: 'Ranking', ikon: '▤' },
+  { id: 'saham', label: 'Saham', ikon: '≋' },
   { id: 'penemuan', label: 'Penemuan', ikon: '✦' },
-  { id: 'prestasi', label: 'Prestasi', ikon: '◔' },
   { id: 'tetapan', label: 'Tetapan', ikon: '⚙︎' },
 ];
 
@@ -30,7 +35,10 @@ function Utama() {
   const [log, setLog] = useState<LogPenemuan[]>([]);
   const [ralat, setRalat] = useState<string | undefined>();
   const [memuat, setMemuat] = useState(false);
-  const [tab, setTab] = useState<Tab>('ranking');
+  const [tab, setTab] = useState<Tab>('cadangan');
+  const [pilihan, setPilihan] = useState<PilihanSaya[]>([]);
+  const [dibuka, setDibuka] = useState<{ ticker: string; h: Horizon } | null>(null);
+  const [prestasiBuka, setPrestasiBuka] = useState(false);
   const sedangSemak = useRef(false);
 
   const semak = useCallback(async () => {
@@ -43,6 +51,7 @@ function Utama() {
       setTetapan(await bacaTetapan());
       setRalat(h.ralat);
       setLog(await bacaLog());
+      setPilihan(await bacaPilihan());
     } finally {
       sedangSemak.current = false;
       setMemuat(false);
@@ -51,10 +60,11 @@ function Utama() {
 
   useEffect(() => {
     (async () => {
-      const [t, c, l] = await Promise.all([bacaTetapan(), bacaCache(), bacaLog()]);
+      const [t, c, l, p] = await Promise.all([bacaTetapan(), bacaCache(), bacaLog(), bacaPilihan()]);
       setTetapan(t);
       setData(c);
       setLog(l);
+      setPilihan(p);
       sediaSaluran().catch(() => {});
       daftarTugas().catch(() => {});
       if (t.sudahMula) semak();
@@ -64,7 +74,8 @@ function Utama() {
     });
     const respons = Notifications.addNotificationResponseReceivedListener((r) => {
       const t = r.notification.request.content.data?.tab;
-      if (t === 'penemuan' || t === 'ranking' || t === 'prestasi') setTab(t);
+      if (t === 'penemuan' || t === 'ranking' || t === 'cadangan' || t === 'saham') setTab(t);
+      if (t === 'prestasi') setPrestasiBuka(true);
     });
     return () => {
       langganan.remove();
@@ -83,6 +94,25 @@ function Utama() {
     },
     [tetapan, semak]
   );
+
+  const tambahPilihan = useCallback(
+    async (p: PilihanSaya) => {
+      const semasa = await bacaPilihan();
+      let baru = [p, ...semasa.filter((x) => !(x.ticker === p.ticker && x.horizon === p.horizon && x.status === 'aktif'))];
+      if (data) baru = kemaskiniPilihan(baru, data).senarai;
+      setPilihan(baru);
+      await simpanPilihan(baru);
+    },
+    [data]
+  );
+
+  const buangPilihan = useCallback(async (id: string) => {
+    const baru = (await bacaPilihan()).filter((x) => x.id !== id);
+    setPilihan(baru);
+    await simpanPilihan(baru);
+  }, []);
+
+  const bukaSaham = useCallback((ticker: string, h: Horizon) => setDibuka({ ticker, h }), []);
 
   if (!tetapan) {
     return (
@@ -112,6 +142,20 @@ function Utama() {
   return (
     <View style={[st.akar, { paddingTop: inset.top }]}>
       <View style={{ flex: 1 }}>
+        {tab === 'cadangan' ? (
+          <CadanganSkrin
+            data={data}
+            tetapan={tetapan}
+            ralat={ralat}
+            memuat={memuat}
+            muatSemula={semak}
+            pilihan={pilihan}
+            tambahPilihan={tambahPilihan}
+            buangPilihan={buangPilihan}
+            bukaSaham={bukaSaham}
+            bukaPrestasi={() => setPrestasiBuka(true)}
+          />
+        ) : null}
         {tab === 'ranking' ? (
           <Ranking
             data={data}
@@ -121,12 +165,34 @@ function Utama() {
             muatSemula={semak}
             kemaskini={kemaskini}
             keTetapan={() => setTab('tetapan')}
+            bukaSaham={bukaSaham}
+            bukaPrestasi={() => setPrestasiBuka(true)}
           />
         ) : null}
-        {tab === 'penemuan' ? <Penemuan data={data} log={log} tetapan={tetapan} memuat={memuat} muatSemula={semak} /> : null}
-        {tab === 'prestasi' ? <Prestasi data={data} tetapan={tetapan} memuat={memuat} muatSemula={semak} /> : null}
+        {tab === 'saham' ? <SahamSkrin data={data} tetapan={tetapan} memuat={memuat} muatSemula={semak} pilihan={pilihan} bukaSaham={bukaSaham} /> : null}
+        {tab === 'penemuan' ? <Penemuan data={data} log={log} tetapan={tetapan} memuat={memuat} muatSemula={semak} bukaSaham={bukaSaham} /> : null}
         {tab === 'tetapan' ? <TetapanSkrin tetapan={tetapan} data={data} kemaskini={kemaskini} muatSemula={semak} /> : null}
       </View>
+      <ButiranSaham
+        ticker={dibuka?.ticker ?? null}
+        horizonAwal={dibuka?.h ?? tetapan.jenisUtama}
+        data={data}
+        tetapan={tetapan}
+        pilihan={pilihan}
+        tambahPilihan={tambahPilihan}
+        buangPilihan={buangPilihan}
+        tutup={() => setDibuka(null)}
+      />
+      <Modal visible={prestasiBuka} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setPrestasiBuka(false)}>
+        <View style={{ flex: 1, backgroundColor: warna.latar, paddingTop: 12 }}>
+          <View style={st.modalKepala}>
+            <Pressable onPress={() => setPrestasiBuka(false)} hitSlop={12} style={st.tutup} accessibilityLabel="Tutup">
+              <Text style={{ color: warna.teks, fontSize: 18 }}>✕</Text>
+            </Pressable>
+          </View>
+          <Prestasi data={data} tetapan={tetapan} memuat={memuat} muatSemula={semak} />
+        </View>
+      </Modal>
       <View style={[st.tabBar, { paddingBottom: Math.max(inset.bottom, 8) }]}>
         {TAB.map((t) => {
           const aktif = t.id === tab;
@@ -166,4 +232,6 @@ const st = StyleSheet.create({
   tabLabel: { color: warna.teksMalap, fontSize: 11, fontWeight: '700' },
   lencana: { position: 'absolute', top: -4, right: -14, backgroundColor: warna.amaran, borderRadius: 8, minWidth: 16, paddingHorizontal: 3, alignItems: 'center' },
   lencanaTeks: { color: '#000', fontSize: 10, fontWeight: '900' },
+  modalKepala: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
+  tutup: { width: 36, height: 36, borderRadius: 18, backgroundColor: warna.kad, alignItems: 'center', justifyContent: 'center' },
 });

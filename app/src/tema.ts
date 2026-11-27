@@ -37,8 +37,8 @@ export const INFO_HORIZON: Record<Horizon, { label: string; ringkas: string; peg
       'Isyarat swing: momentum 10 hari, aliran EMA9/EMA21, cerun MACD, RSI(14), tembusan julat 20 hari dan aliran volum. Henti rugi 2× ATR.',
   },
   musiman: {
-    label: 'Musiman',
-    ringkas: 'Seasonal / position',
+    label: 'Bulanan',
+    ringkas: 'Position / musiman',
     pegangan: '1–3 bulan',
     terang:
       'Isyarat jangka sederhana: corak musim sejarah (prestasi saham bagi bulan yang sama sehingga 10 tahun lalu), momentum 6 bulan, aliran SMA50/SMA200, kekuatan relatif berbanding KLCI dan jarak dari paras tertinggi 52 minggu. Henti rugi 3× ATR.',
@@ -77,4 +77,26 @@ export const fmtMasa = (iso: string | null | undefined) => {
   const jam = t.getHours().toString().padStart(2, '0');
   const min = t.getMinutes().toString().padStart(2, '0');
   return `${t.getDate()} ${BULAN[t.getMonth()]} ${jam}:${min}`;
+};
+
+/** Waktu Malaysia (UTC+8) daripada saat epoch, tanpa bergantung pada zon waktu telefon. */
+export const tarikhMY = (epoch: number) => new Date((epoch + 8 * 3600) * 1000);
+
+export const fmtEpoch = (epoch: number, gaya: 'jam' | 'hariJam' | 'hari' | 'bulanTahun' | 'tahun') => {
+  const d = tarikhMY(epoch);
+  const jam = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+  const hari = `${d.getUTCDate()} ${BULAN[d.getUTCMonth()]}`;
+  if (gaya === 'jam') return jam;
+  if (gaya === 'hariJam') return `${hari} ${jam}`;
+  if (gaya === 'hari') return hari;
+  if (gaya === 'bulanTahun') return `${BULAN[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`;
+  return String(d.getUTCFullYear());
+};
+
+export const fmtHarga = (n: number | null | undefined) => {
+  if (n == null || !isFinite(n)) return '—';
+  if (n >= 100) return n.toFixed(2);
+  if (n >= 1) return n.toFixed(2);
+  if (n >= 0.1) return n.toFixed(3);
+  return n.toFixed(4);
 };

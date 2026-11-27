@@ -85,13 +85,13 @@ jobs:
         run: |
           mkdir -p keluaran
           cp app/android/app/build/outputs/apk/release/app-release.apk keluaran/BursaEdge.apk
-          cp keluaran/BursaEdge.apk "keluaran/BursaEdge-v3.0.0-b${{ github.run_number }}.apk"
+          cp keluaran/BursaEdge.apk "keluaran/BursaEdge-v3.1.0-b${{ github.run_number }}.apk"
           ls -la keluaran
 
       - uses: actions/upload-artifact@v4
         with:
           name: BursaEdge-android-b${{ github.run_number }}
-          path: keluaran/BursaEdge-v3.0.0-b${{ github.run_number }}.apk
+          path: keluaran/BursaEdge-v3.1.0-b${{ github.run_number }}.apk
 
       - name: Terbitkan ke Releases (tag terkini)
         env:

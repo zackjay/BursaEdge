@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import ButiranSaham from '../ButiranSaham';
-import { DataTerkini, Horizon, ItemRanking, SEMUA_HORIZON, Sisi, Tetapan } from '../jenis';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { DataTerkini, Horizon, SEMUA_HORIZON, Sisi, Tetapan } from '../jenis';
 import { Butang, Kad, KadSaham, Kosong, Segmen } from '../komponen';
 import { ketepatanSejak, kiraPemantauan } from '../semak';
 import { fmtMasa, fmtPeratus, fmtTarikh, INFO_HORIZON, warna } from '../tema';
@@ -14,12 +13,13 @@ interface Props {
   muatSemula: () => void;
   kemaskini: (t: Partial<Tetapan>) => void;
   keTetapan: () => void;
+  bukaSaham: (ticker: string, h: Horizon) => void;
+  bukaPrestasi: () => void;
 }
 
-export default function Ranking({ data, tetapan, ralat, memuat, muatSemula, kemaskini, keTetapan }: Props) {
+export default function Ranking({ data, tetapan, ralat, memuat, muatSemula, kemaskini, keTetapan, bukaSaham, bukaPrestasi }: Props) {
   const [horizon, setHorizon] = useState<Horizon>(tetapan.jenisUtama);
   const [sisi, setSisi] = useState<Sisi>('bullish');
-  const [pilih, setPilih] = useState<ItemRanking | null>(null);
 
   useEffect(() => setHorizon(tetapan.jenisUtama), [tetapan.jenisUtama]);
 
@@ -66,10 +66,15 @@ export default function Ranking({ data, tetapan, ralat, memuat, muatSemula, kema
         label={(h) => INFO_HORIZON[h].label}
         sub={(h) => INFO_HORIZON[h].ringkas}
       />
-      <Text style={[st.kecil, { marginBottom: 10 }]}>
-        {INFO_HORIZON[horizon].ringkas} · pegangan {INFO_HORIZON[horizon].pegangan}
-        {dh ? ` · ${dh.bilangan_layak} saham layak` : ''}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <Text style={[st.kecil, { flex: 1 }]}>
+          {INFO_HORIZON[horizon].ringkas} · pegangan {INFO_HORIZON[horizon].pegangan}
+          {dh ? ` · ${dh.bilangan_layak} saham layak` : ''}
+        </Text>
+        <Pressable onPress={bukaPrestasi} hitSlop={8}>
+          <Text style={{ color: warna.aksen, fontWeight: '700', fontSize: 13 }}>Prestasi ›</Text>
+        </Pressable>
+      </View>
       <Segmen
         pilihan={['bullish', 'bearish'] as Sisi[]}
         nilai={sisi}
@@ -87,7 +92,7 @@ export default function Ranking({ data, tetapan, ralat, memuat, muatSemula, kema
         keyExtractor={(x) => x.ticker}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         ListHeaderComponent={kepala}
-        renderItem={({ item }) => <KadSaham item={item} sisi={sisi} tekan={() => setPilih(item)} />}
+        renderItem={({ item }) => <KadSaham item={item} sisi={sisi} tekan={() => bukaSaham(item.ticker, horizon)} />}
         refreshControl={<RefreshControl refreshing={memuat} onRefresh={muatSemula} tintColor={warna.teksLemah} colors={[warna.aksen]} />}
         ListEmptyComponent={
           !data ? (
@@ -115,7 +120,6 @@ export default function Ranking({ data, tetapan, ralat, memuat, muatSemula, kema
           ) : undefined
         }
       />
-      <ButiranSaham item={pilih} sisi={sisi} horizon={dh ?? null} tutup={() => setPilih(null)} />
     </>
   );
 }

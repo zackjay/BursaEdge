@@ -2,8 +2,13 @@
 import { muatData } from './data';
 import { DataTerkini, Horizon, Penemuan, SEMUA_HORIZON, Sisi, Tetapan } from './jenis';
 import { hantarPenemuan, hantarSistem } from './notifikasi';
+import { kemaskiniPilihan, LABEL_STATUS, untungPeratus } from './pelan';
 import {
   bacaCache,
+  bacaEtag,
+  bacaPilihan,
+  simpanEtag,
+  simpanPilihan,
   bacaKeputusanDimaklum,
   bacaTarikhDimaklum,
   bacaTetapan,
@@ -84,15 +89,36 @@ export async function semakSekarang(): Promise<HasilSemakan> {
   if (!tetapan.sudahMula) return { data: await bacaCache(), tetapan, dimaklum: 0, dataBaru: false };
 
   let data: DataTerkini;
-  try {
-    data = await muatData(tetapan, await bacaToken());
-  } catch (e) {
-    return { data: await bacaCache(), tetapan, ralat: (e as Error).message, dimaklum: 0, dataBaru: false };
-  }
   const lama = await bacaCache();
+  try {
+    const h = await muatData(tetapan, await bacaToken(), lama ? await bacaEtag() : '');
+    if (h.tidakBerubah && lama) {
+      await simpanSemakanTerakhir(kini);
+      return { data: lama, tetapan, dimaklum: 0, dataBaru: false };
+    }
+    data = h.data!;
+    await simpanEtag(h.etag);
+  } catch (e) {
+    return { data: lama, tetapan, ralat: (e as Error).message, dimaklum: 0, dataBaru: false };
+  }
   const dataBaru = !lama || lama.id_larian !== data.id_larian;
   await simpanCache(data);
   await simpanSemakanTerakhir(kini);
+
+  // Pilihan Saya: kemas kini harga & status, maklumkan jika sasaran/henti rugi/tamat tempoh
+  const pilihan = await bacaPilihan();
+  if (pilihan.length) {
+    const { senarai, berubah } = kemaskiniPilihan(pilihan, data);
+    await simpanPilihan(senarai);
+    for (const p of berubah) {
+      const u = untungPeratus(p);
+      await hantarSistem(
+        `${p.nama} · ${LABEL_STATUS[p.status]}`,
+        `${INFO_HORIZON[p.horizon].label}: masuk RM${p.harga_masuk} → tutup RM${p.harga_semasa} (${u >= 0 ? '+' : ''}${u.toFixed(2)}%).`,
+        'cadangan'
+      );
+    }
+  }
 
   let ubahTetapan = false;
   if (!tetapan.mulaTarikh) {

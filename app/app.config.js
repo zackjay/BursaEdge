@@ -6,7 +6,7 @@ module.exports = () => ({
   expo: {
     name: 'BursaEdge',
     slug: 'bursaedge',
-    version: '3.0.0',
+    version: '3.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',

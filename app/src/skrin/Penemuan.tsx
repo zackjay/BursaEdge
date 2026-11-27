@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DataTerkini, Horizon, LogPenemuan, Penemuan as P, SEMUA_HORIZON, Tetapan } from '../jenis';
 import { Cip, Kad, Kosong, Tajuk } from '../komponen';
 import { tapisPenemuan } from '../semak';
@@ -11,9 +11,10 @@ interface Props {
   tetapan: Tetapan;
   memuat: boolean;
   muatSemula: () => void;
+  bukaSaham: (ticker: string, h: Horizon) => void;
 }
 
-export default function Penemuan({ data, log, tetapan, memuat, muatSemula }: Props) {
+export default function Penemuan({ data, log, tetapan, memuat, muatSemula, bukaSaham }: Props) {
   const [tapis, setTapis] = useState<Horizon | 'semua' | 'saya'>('saya');
 
   const tapisItem = (item: P[]) => {
@@ -41,7 +42,7 @@ export default function Penemuan({ data, log, tetapan, memuat, muatSemula }: Pro
 
       <Text style={st.label}>{data ? `Hari ini · ${fmtTarikh(data.tarikh_data)}` : 'Hari ini'}</Text>
       {hariIni.length ? (
-        <Kumpulan item={hariIni} />
+        <Kumpulan item={hariIni} buka={bukaSaham} />
       ) : (
         <Kosong
           tajuk="Tiada penemuan baru"
@@ -56,7 +57,7 @@ export default function Penemuan({ data, log, tetapan, memuat, muatSemula }: Pro
         return (
           <View key={l.tarikh}>
             <Text style={st.tarikh}>{fmtTarikh(l.tarikh)}</Text>
-            <Kumpulan item={item} />
+            <Kumpulan item={item} buka={bukaSaham} />
           </View>
         );
       })}
@@ -64,7 +65,7 @@ export default function Penemuan({ data, log, tetapan, memuat, muatSemula }: Pro
   );
 }
 
-function Kumpulan({ item }: { item: P[] }) {
+function Kumpulan({ item, buka }: { item: P[]; buka: (ticker: string, h: Horizon) => void }) {
   return (
     <>
       {SEMUA_HORIZON.map((h) => {
@@ -74,7 +75,7 @@ function Kumpulan({ item }: { item: P[] }) {
           <Kad key={h} gaya={{ paddingVertical: 10 }}>
             <Text style={st.horizon}>{INFO_HORIZON[h].label}</Text>
             {x.map((p) => (
-              <View key={`${p.sisi}-${p.ticker}`} style={st.baris}>
+              <Pressable key={`${p.sisi}-${p.ticker}`} style={st.baris} onPress={() => buka(p.ticker, h)}>
                 <Text style={[st.sisi, { color: warnaSisi(p.sisi) }]}>{p.sisi === 'bullish' ? '▲' : '▼'}</Text>
                 <Text style={[st.rank, { color: warnaSisi(p.sisi) }]}>#{p.kedudukan}</Text>
                 <Text style={st.nama}>{p.nama}</Text>
@@ -83,7 +84,7 @@ function Kumpulan({ item }: { item: P[] }) {
                 <Text style={[st.jenis, p.jenis === 'baru' ? { color: warna.amaran } : { color: warna.aksen }]}>
                   {p.jenis === 'baru' ? 'BARU' : `▲${(p.dari ?? p.kedudukan) - p.kedudukan} dari #${p.dari}`}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </Kad>
         );

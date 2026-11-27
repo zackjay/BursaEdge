@@ -74,8 +74,8 @@ export default function Tetapan({ tetapan, data, kemaskini, muatSemula }: Props)
       }
       const baru = { ...tetapan, repo: r, cawangan: cawangan.trim() || 'main' };
       kemaskini({ repo: r, cawangan: baru.cawangan });
-      const d = await muatData(baru, await bacaToken());
-      Alert.alert('Berjaya', `Data ${d.tarikh_data} dimuatkan (${d.bilangan_saham_dianalisa} saham).`);
+      const { data: d } = await muatData(baru, await bacaToken());
+      Alert.alert('Berjaya', d ? `Data ${d.tarikh_data} dimuatkan (${d.bilangan_saham_dianalisa} saham).` : 'Sambungan berjaya.');
       muatSemula();
     } catch (e) {
       Alert.alert('Sambungan gagal', (e as Error).message);
