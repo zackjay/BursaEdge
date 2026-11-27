@@ -1,9 +1,12 @@
 // Logik semakan yang dikongsi oleh tugas latar belakang dan app (latar depan).
 import { muatData } from './data';
 import { DataTerkini, Horizon, Penemuan, SEMUA_HORIZON, Sisi, Tetapan } from './jenis';
-import { hantarPenemuan, hantarSistem } from './notifikasi';
+import { adaVersiBaru, semakVersi } from './kemaskini';
+import { hantarPenemuan, hantarSistem, hantarVersiBaru } from './notifikasi';
 import { kemaskiniPilihan, LABEL_STATUS, untungPeratus } from './pelan';
 import {
+  bacaBinaDimaklum,
+  simpanBinaDimaklum,
   bacaCache,
   bacaEtag,
   bacaPilihan,
@@ -87,6 +90,17 @@ export async function semakSekarang(): Promise<HasilSemakan> {
   const tetapan = await bacaTetapan();
   const kini = new Date().toISOString();
   if (!tetapan.sudahMula) return { data: await bacaCache(), tetapan, dimaklum: 0, dataBaru: false };
+
+  // Versi app baru? Maklumkan sekali sahaja bagi setiap bina
+  try {
+    const v = await semakVersi(tetapan.repo);
+    if (adaVersiBaru(v) && v.bina > (await bacaBinaDimaklum())) {
+      await hantarVersiBaru(v.versi, v.bina, v.url);
+      await simpanBinaDimaklum(v.bina);
+    }
+  } catch {
+    // abaikan — semakan versi tidak kritikal
+  }
 
   let data: DataTerkini;
   const lama = await bacaCache();

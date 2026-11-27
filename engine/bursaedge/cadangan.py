@@ -10,12 +10,18 @@ Setiap cadangan disertakan pelan: zon masuk, henti rugi, sasaran, gred A/B/C.
 """
 from __future__ import annotations
 
+import json
+import logging
 import math
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import pandas as pd
 
+from .faktor import meta_asas
 from .penunjuk import bundar_tik
+
+log = logging.getLogger("bursaedge.cadangan")
 
 LABEL = {"harian": "Harian", "mingguan": "Mingguan", "musiman": "Bulanan"}
 
@@ -169,12 +175,13 @@ def jana(
 # Rekod & penilaian keputusan cadangan
 # --------------------------------------------------------------------------
 
-def rekod(state: dict, tarikh: str, h: str, cad: dict):
+def rekod(state: dict, tarikh: str, h: str, cad: dict, ujian_balik: bool = False):
     belum = state.setdefault("cadangan_belum", [])
     belum[:] = [p for p in belum if not (p["tarikh"] == tarikh and p["horizon"] == h)]
     for item in cad["beli"] + cad["elak"]:
         belum.append(
             {
+                **({"ujian_balik": True} if ujian_balik else {}),
                 "tarikh": tarikh,
                 "horizon": h,
                 "tindakan": item["tindakan"],
@@ -251,6 +258,7 @@ def nilai(state: dict, harian: Dict[str, pd.DataFrame], simpan: int = 60) -> int
             p["tindakan"], {"n": 0, "menang": 0, "sasaran": 0, "henti": 0, "tamat": 0, "jumlah_r": 0.0}
         )
         s["n"] += 1
+        s["ujian_balik"] = s.get("ujian_balik", 0) + int(bool(p.get("ujian_balik")))
         s["menang"] += int(r["r"] > 0)
         s[r["hasil"]] += 1
         s["jumlah_r"] = round(s["jumlah_r"] + r["r"], 2)
@@ -273,7 +281,87 @@ def ringkasan(state: dict, h: str) -> dict:
             "sasaran": s["sasaran"],
             "henti": s["henti"],
             "tamat": s["tamat"],
+            "ujian_balik": s.get("ujian_balik", 0),
         }
     belum = [p for p in state.get("cadangan_belum", []) if p["horizon"] == h]
     hasil["belum_dinilai"] = len(belum)
+    isi = state.get("cadangan_isi_semula")
+    if isinstance(isi, dict):
+        hasil["ujian_balik_dari"] = isi.get("dari")
+        hasil["ujian_balik_hingga"] = isi.get("hingga")
     return hasil
+
+
+# --------------------------------------------------------------------------
+# Ujian balik: kira semula cadangan bagi hari-hari lepas daripada ranking yang
+# telah direkod dalam data/sejarah/ (sekali sahaja). Hanya data sehingga hari
+# itu digunakan untuk penapis aliran, rejim pasaran dan ketepatan terkini.
+# --------------------------------------------------------------------------
+
+def _rejim_pada(indeks: Optional[pd.DataFrame], ts: pd.Timestamp) -> str:
+    if indeks is None:
+        return "tidak diketahui"
+    c = indeks["Close"][indeks.index <= ts]
+    if len(c) < 200:
+        return "tidak diketahui"
+    harga, s50, s200 = float(c.iloc[-1]), float(c.tail(50).mean()), float(c.tail(200).mean())
+    if harga > s50 > s200:
+        return "menaik"
+    if harga < s50 < s200:
+        return "menurun"
+    return "mendatar"
+
+
+def isi_semula(state: dict, cfg: dict, folder_sejarah: Path, harian: Dict[str, pd.DataFrame], indeks: Optional[pd.DataFrame], tarikh_data: str) -> int:
+    if state.get("cadangan_isi_semula") or not folder_sejarah.exists():
+        return 0
+    sedia = {(p["tarikh"], p["horizon"]) for p in state.get("cadangan_belum", [])}
+    for senarai in state.get("cadangan_dinilai", {}).values():
+        sedia |= {(p["tarikh"], p["horizon"]) for p in senarai}
+    tarikh_diisi, bil = [], 0
+    for f in sorted(folder_sejarah.glob("*.json")):
+        tarikh = f.stem
+        if tarikh >= tarikh_data:
+            continue
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        ranking = {
+            h: {"bullish": v.get("bullish", []), "bearish": v.get("bearish", [])}
+            for h, v in d.get("horizon", {}).items()
+            if h in cfg["horizon"]
+        }
+        if not ranking:
+            continue
+        ts = pd.Timestamp(tarikh)
+        meta = {}
+        for t, df in harian.items():
+            sub = df[df.index <= ts]
+            if len(sub) >= 30 and sub.index[-1] == ts:
+                meta[t] = meta_asas(sub)
+        rejim = _rejim_pada(indeks, ts)
+        # Hanya penilaian yang sudah selesai pada tarikh itu
+        state_lepas = {
+            "pilihan_dinilai": {
+                h: [p for p in state.get("pilihan_dinilai", {}).get(h, []) if p.get("tarikh_nilai", "9999") <= tarikh]
+                for h in cfg["horizon"]
+            }
+        }
+        for h in ranking:
+            if (tarikh, h) in sedia:
+                continue
+            cad = jana(h, cfg, ranking, meta, rejim, state_lepas, tarikh)
+            rekod(state, tarikh, h, cad, ujian_balik=True)
+            bil += len(cad["beli"]) + len(cad["elak"])
+        tarikh_diisi.append(tarikh)
+    if not tarikh_diisi:
+        return 0
+    state["cadangan_isi_semula"] = {
+        "dari": tarikh_diisi[0] if tarikh_diisi else None,
+        "hingga": tarikh_diisi[-1] if tarikh_diisi else None,
+        "hari": len(tarikh_diisi),
+        "cadangan": bil,
+    }
+    log.info("Ujian balik cadangan: %d hari, %d cadangan", len(tarikh_diisi), bil)
+    return bil

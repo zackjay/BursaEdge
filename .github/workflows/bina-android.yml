@@ -83,23 +83,50 @@ jobs:
 
       - name: Sediakan fail
         run: |
+          VERSI=$(node -p "require('./app/app.config.js')().expo.version")
+          echo "VERSI=$VERSI" >> "$GITHUB_ENV"
           mkdir -p keluaran
           cp app/android/app/build/outputs/apk/release/app-release.apk keluaran/BursaEdge.apk
-          cp keluaran/BursaEdge.apk "keluaran/BursaEdge-v3.1.0-b${{ github.run_number }}.apk"
+          cp keluaran/BursaEdge.apk "keluaran/BursaEdge-v${VERSI}-b${{ github.run_number }}.apk"
+          SAIZ=$(python3 -c "import os;print(round(os.path.getsize('keluaran/BursaEdge.apk')/1048576,1))")
+          URL="https://github.com/${{ github.repository }}/releases/download/terkini/BursaEdge.apk"
+          python3 - "$VERSI" "${{ github.run_number }}" "$URL" "$SAIZ" <<'PY'
+          import json, sys, datetime
+          versi, bina, url, saiz = sys.argv[1], int(sys.argv[2]), sys.argv[3], float(sys.argv[4])
+          json.dump({"versi": versi, "bina": bina, "url": url, "saiz_mb": saiz,
+                     "halaman": url.rsplit("/download/", 1)[0] + "/tag/terkini",
+                     "tarikh": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
+                    open("keluaran/versi.json", "w"))
+          PY
+          cat keluaran/versi.json
           ls -la keluaran
 
       - uses: actions/upload-artifact@v4
         with:
           name: BursaEdge-android-b${{ github.run_number }}
-          path: keluaran/BursaEdge-v3.1.0-b${{ github.run_number }}.apk
+          path: keluaran/BursaEdge-v*-b${{ github.run_number }}.apk
 
       - name: Terbitkan ke Releases (tag terkini)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTA="Muat turun **BursaEdge.apk** (Android) atau **BursaEdge-unsigned.ipa** (iPhone, perlu sideload). Lihat README untuk cara pasang."
-          gh release view terkini >/dev/null 2>&1 || gh release create terkini --title "BursaEdge — versi terkini" --notes "$NOTA" --target "${GITHUB_SHA}" || true
-          gh release upload terkini keluaran/BursaEdge.apk --clobber
-          gh release edit terkini --notes "$NOTA
+          URL="https://github.com/${{ github.repository }}/releases/download/terkini/BursaEdge.apk"
+          NOTA=$(cat <<EOF
+          ## 📱 Pasang di Android (Samsung S25 Ultra dsb.)
 
-          Android: bina #${{ github.run_number }} ($(date -u +%Y-%m-%d))" || true
+          **Pautan terus:** ${URL}
+
+          1. Buka pautan di atas di telefon (atau imbas kod QR dalam README) → muat turun bermula.
+          2. Buka fail **BursaEdge.apk** → *Pasang*. Jika disekat, benarkan "Pasang apl tidak diketahui" untuk pelayar anda.
+             Pada Samsung: matikan sementara *Tetapan → Keselamatan dan privasi → Auto Blocker*.
+          3. **Jangan nyahpasang versi lama** — pasang terus di atasnya supaya tetapan, pemantauan & Pilihan Saya kekal.
+
+          Versi ${VERSI} · bina #${{ github.run_number }} · $(date -u +%Y-%m-%d)
+          App akan memaklumkan secara automatik apabila versi baru tersedia.
+
+          iPhone: BursaEdge-unsigned.ipa (ditangguhkan, perlu sideload).
+          EOF
+          )
+          gh release view terkini >/dev/null 2>&1 || gh release create terkini --title "BursaEdge — versi terkini" --notes "$NOTA" --target "${GITHUB_SHA}" || true
+          gh release upload terkini keluaran/BursaEdge.apk keluaran/versi.json --clobber
+          gh release edit terkini --title "BursaEdge ${VERSI} — versi terkini" --notes "$NOTA" || true

@@ -102,12 +102,15 @@ export interface StatCadangan {
   sasaran: number;
   henti: number;
   tamat: number;
+  ujian_balik?: number;
 }
 
 export interface PrestasiCadangan {
   beli: StatCadangan;
   elak: StatCadangan;
   belum_dinilai: number;
+  ujian_balik_dari?: string | null;
+  ujian_balik_hingga?: string | null;
 }
 
 export interface CadanganDinilai {
@@ -127,6 +130,7 @@ export interface CadanganDinilai {
   r: number;
   pulangan: number;
   tarikh_tutup: string;
+  ujian_balik?: boolean;
 }
 
 export interface SahamRingkas {

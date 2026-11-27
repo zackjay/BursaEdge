@@ -1,9 +1,9 @@
-import Constants from 'expo-constants';
 import React, { useEffect, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { jalankanAnalisa, muatData, repoSah } from '../data';
 import { DataTerkini, FasaNotifikasi, Horizon, SEMUA_HORIZON, Sisi, Tetapan as T } from '../jenis';
 import { Butang, Cip, Kad, Tajuk } from '../komponen';
+import { adaVersiBaru, BINA_SEMASA, semakVersi, VERSI_SEMASA } from '../kemaskini';
 import { statusLatar } from '../latarBelakang';
 import { hantarUjian, kebenaranAda, mintaKebenaran } from '../notifikasi';
 import { kiraPemantauan } from '../semak';
@@ -265,8 +265,36 @@ export default function Tetapan({ tetapan, data, kemaskini, muatSemula }: Props)
         </View>
       </Kad>
 
+      <Text style={st.label}>Versi app</Text>
+      <Kad>
+        <Text style={st.teks}>
+          BursaEdge {VERSI_SEMASA} (bina #{BINA_SEMASA})
+        </Text>
+        <Text style={st.nota}>Kemas kini dipasang terus di atas versi lama — tetapan, pemantauan & Pilihan Saya kekal.</Text>
+        <View style={{ marginTop: 8 }}>
+          <Butang
+            jenis="kedua"
+            teks={sibuk ? 'Menyemak…' : 'Semak versi baru'}
+            lumpuh={sibuk}
+            tekan={async () => {
+              setSibuk(true);
+              const v = await semakVersi(tetapan.repo);
+              setSibuk(false);
+              if (adaVersiBaru(v)) {
+                Alert.alert(`Versi ${v.versi} tersedia`, `Bina #${v.bina}. Muat turun sekarang? Selepas muat turun, buka fail APK untuk memasang.`, [
+                  { text: 'Nanti', style: 'cancel' },
+                  { text: 'Muat turun', onPress: () => Linking.openURL(v.url).catch(() => {}) },
+                ]);
+              } else {
+                Alert.alert('Terkini', v ? 'Anda sudah menggunakan versi terbaru.' : 'Tidak dapat menyemak versi sekarang. Cuba lagi kemudian.');
+              }
+            }}
+          />
+        </View>
+      </Kad>
+
       <Text style={st.nota}>
-        BursaEdge v{Constants.expoConfig?.version ?? '—'} · enjin {data?.versi_enjin ?? '—'}
+        Enjin {data?.versi_enjin ?? '—'}
         {data?.ticker_gagal?.length ? ` · ${data.ticker_gagal.length} kod gagal dimuat: ${data.ticker_gagal.slice(0, 8).join(', ')}` : ''}
         {'\n'}Analisa teknikal automatik untuk rujukan sahaja. Bukan nasihat pelaburan.
       </Text>

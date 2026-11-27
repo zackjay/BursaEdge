@@ -162,6 +162,12 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
             ) : (
               <Text style={st.teks}>Rekod bermula {fmtTarikh(data.tarikh_data)}. Keputusan pertama selepas cadangan mencapai sasaran, henti rugi atau tamat tempoh.</Text>
             )}
+            {pc && (pc.beli.ujian_balik || pc.elak.ujian_balik) ? (
+              <Text style={[st.kecil, { marginBottom: 4 }]}>
+                Termasuk {(pc.beli.ujian_balik ?? 0) + (pc.elak.ujian_balik ?? 0)} cadangan ujian balik — dikira semula daripada ranking yang direkod{' '}
+                {fmtTarikh(pc.ujian_balik_dari)} hingga {fmtTarikh(pc.ujian_balik_hingga)} menggunakan syarat cadangan semasa.
+              </Text>
+            ) : null}
             {pc?.belum_dinilai ? <Text style={st.kecil}>{pc.belum_dinilai} cadangan masih dalam tempoh pegangan.</Text> : null}
             {lepas.map((r, i) => (
               <View key={i} style={st.barisLepas}>
@@ -169,6 +175,7 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
                 <Text style={[st.kecil, { width: 52 }]}>{fmtTarikh(r.tarikh).replace(/ \d{4}$/, '')}</Text>
                 <Text style={[st.teks, { flex: 1 }]} numberOfLines={1}>
                   {r.tindakan} {r.nama}
+                  {r.ujian_balik ? <Text style={st.kecil}> · UB</Text> : null}
                 </Text>
                 <Text style={st.kecil}>{r.hasil === 'sasaran' ? 'sasaran' : r.hasil === 'henti' ? 'henti rugi' : 'tamat'} </Text>
                 <Text style={[st.hargaKecil, { color: r.r > 0 ? warna.bullish : warna.bearish, width: 52, textAlign: 'right' }]}>
@@ -177,7 +184,9 @@ export default function Cadangan({ data, tetapan, ralat, memuat, muatSemula, pil
                 </Text>
               </View>
             ))}
-            <Text style={[st.kecil, { marginTop: 6 }]}>R = untung/rugi berbanding risiko (jarak ke henti rugi). +2R bermaksud untung dua kali ganda risiko.</Text>
+            <Text style={[st.kecil, { marginTop: 6 }]}>
+              R = untung/rugi berbanding risiko (jarak ke henti rugi). +2R bermaksud untung dua kali ganda risiko. UB = ujian balik.
+            </Text>
             <Pressable onPress={bukaPrestasi} style={{ marginTop: 8 }}>
               <Text style={{ color: warna.aksen, fontWeight: '700' }}>Prestasi ranking & pembelajaran ›</Text>
             </Pressable>

@@ -1,10 +1,11 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ButiranSaham from './src/ButiranSaham';
 import { DataTerkini, Horizon, LogPenemuan, PilihanSaya, Tetapan } from './src/jenis';
+import { adaVersiBaru, InfoVersi, semakVersi } from './src/kemaskini';
 import { daftarTugas } from './src/latarBelakang';
 import { sediaSaluran } from './src/notifikasi';
 import { kemaskiniPilihan } from './src/pelan';
@@ -39,6 +40,7 @@ function Utama() {
   const [pilihan, setPilihan] = useState<PilihanSaya[]>([]);
   const [dibuka, setDibuka] = useState<{ ticker: string; h: Horizon } | null>(null);
   const [prestasiBuka, setPrestasiBuka] = useState(false);
+  const [versiBaru, setVersiBaru] = useState<InfoVersi | null>(null);
   const sedangSemak = useRef(false);
 
   const semak = useCallback(async () => {
@@ -68,12 +70,16 @@ function Utama() {
       sediaSaluran().catch(() => {});
       daftarTugas().catch(() => {});
       if (t.sudahMula) semak();
+      const v = await semakVersi(t.repo);
+      if (adaVersiBaru(v)) setVersiBaru(v);
     })();
     const langganan = AppState.addEventListener('change', (s) => {
       if (s === 'active') semak();
     });
     const respons = Notifications.addNotificationResponseReceivedListener((r) => {
       const t = r.notification.request.content.data?.tab;
+      const url = r.notification.request.content.data?.url;
+      if (t === 'kemaskini' && typeof url === 'string') Linking.openURL(url).catch(() => {});
       if (t === 'penemuan' || t === 'ranking' || t === 'cadangan' || t === 'saham') setTab(t);
       if (t === 'prestasi') setPrestasiBuka(true);
     });
@@ -141,6 +147,16 @@ function Utama() {
 
   return (
     <View style={[st.akar, { paddingTop: inset.top }]}>
+      {versiBaru ? (
+        <Pressable onPress={() => Linking.openURL(versiBaru.url).catch(() => {})} style={st.sepanduk} accessibilityRole="button">
+          <Text style={st.sepandukTeks}>
+            ⬇ Versi baru {versiBaru.versi} tersedia — tekan untuk muat turun & pasang
+          </Text>
+          <Pressable onPress={() => setVersiBaru(null)} hitSlop={10}>
+            <Text style={st.sepandukTeks}>✕</Text>
+          </Pressable>
+        </Pressable>
+      ) : null}
       <View style={{ flex: 1 }}>
         {tab === 'cadangan' ? (
           <CadanganSkrin
@@ -232,6 +248,8 @@ const st = StyleSheet.create({
   tabLabel: { color: warna.teksMalap, fontSize: 11, fontWeight: '700' },
   lencana: { position: 'absolute', top: -4, right: -14, backgroundColor: warna.amaran, borderRadius: 8, minWidth: 16, paddingHorizontal: 3, alignItems: 'center' },
   lencanaTeks: { color: '#000', fontSize: 10, fontWeight: '900' },
+  sepanduk: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: warna.aksen, paddingHorizontal: 14, paddingVertical: 10 },
+  sepandukTeks: { color: '#fff', fontWeight: '800', fontSize: 13, flexShrink: 1 },
   modalKepala: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
   tutup: { width: 36, height: 36, borderRadius: 18, backgroundColor: warna.kad, alignItems: 'center', justifyContent: 'center' },
 });

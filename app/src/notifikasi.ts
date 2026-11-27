@@ -89,6 +89,16 @@ export async function hantarSistem(tajuk: string, badan: string, tab = 'ranking'
   await papar(tajuk, badan, { tab }, SALURAN_SISTEM);
 }
 
+export async function hantarVersiBaru(versi: string, bina: number, url: string) {
+  if (!(await kebenaranAda())) return;
+  await papar(
+    `BursaEdge ${versi} tersedia`,
+    `Versi baru (bina #${bina}) sedia untuk dipasang. Tekan untuk muat turun, kemudian buka fail APK.`,
+    { tab: 'kemaskini', url },
+    SALURAN_SISTEM
+  );
+}
+
 export async function hantarUjian() {
   const ok = await mintaKebenaran();
   if (!ok) return false;

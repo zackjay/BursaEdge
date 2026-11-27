@@ -89,5 +89,8 @@ export async function simpanToken(token: string) {
 export const bacaEtag = async () => (await AsyncStorage.getItem(K.etag)) ?? '';
 export const simpanEtag = (e: string) => AsyncStorage.setItem(K.etag, e);
 
+export const bacaBinaDimaklum = async () => Number((await AsyncStorage.getItem('be.bina_dimaklum.v1')) ?? 0);
+export const simpanBinaDimaklum = (n: number) => AsyncStorage.setItem('be.bina_dimaklum.v1', String(n));
+
 export const bacaPilihan = () => bacaJson<PilihanSaya[]>(K.pilihan, []);
 export const simpanPilihan = (p: PilihanSaya[]) => AsyncStorage.setItem(K.pilihan, JSON.stringify(p));

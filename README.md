@@ -77,9 +77,17 @@ Pegangan maksimum: Harian 2, Mingguan 15, Bulanan 42 hari dagangan.
 
 ## Pasang di Android
 
-1. Buka `https://github.com/<pemilik>/BursaEdge/releases/tag/terkini` di telefon.
-2. Muat turun **BursaEdge.apk** → buka → benarkan "Pasang apl tidak diketahui" untuk pelayar anda.
-3. Kemas kini seterusnya: muat turun APK baru dan pasang di atas yang lama (data tetap disimpan).
+**Pautan terus (buka di telefon):**
+https://github.com/zackjay/BursaEdge/releases/download/terkini/BursaEdge.apk
+
+<img src="docs/pasang-android-qr.png" width="260" alt="Kod QR muat turun BursaEdge.apk">
+
+1. Imbas kod QR dengan kamera telefon (atau buka pautan di atas) → muat turun bermula.
+2. Buka **BursaEdge.apk** → *Pasang*. Jika disekat, benarkan "Pasang apl tidak diketahui" untuk
+   pelayar anda. Pada Samsung, matikan sementara *Tetapan → Keselamatan dan privasi → Auto Blocker*.
+3. **Kemas kini:** pasang APK baru terus di atas yang lama — jangan nyahpasang — supaya tetapan,
+   pemantauan dan Pilihan Saya kekal. App memaklumkan sendiri apabila versi baru tersedia
+   (notifikasi + sepanduk biru; tekan untuk muat turun).
 4. Supaya notifikasi tepat masa, matikan *pengoptimuman bateri* untuk BursaEdge.
 
 ## Pasang di iPhone (ditangguhkan)

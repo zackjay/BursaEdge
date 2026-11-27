@@ -54,6 +54,7 @@ module.exports = () => ({
     extra: {
       dataRepo: process.env.BURSAEDGE_DATA_REPO || '',
       cawangan: process.env.BURSAEDGE_DATA_BRANCH || 'main',
+      bina: nomborBina,
     },
   },
 });
