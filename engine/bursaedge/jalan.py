@@ -289,12 +289,13 @@ def jalan(args) -> int:
         "penemuan_baru": penemuan,
         "pilihan_lepas": pilihan_lepas,
         "cadangan_lepas": cadangan_lepas,
+        "cadangan_terbuka": cad_mod.terbuka(state, semua, tarikh_data),
         "semua_saham": semua_saham,
         "penafian": "Analisa teknikal automatik untuk rujukan sahaja. Bukan nasihat pelaburan.",
     }
     latest = _bersihkan_nan(latest)
     _tulis_json(keluar / "latest.json", latest, padat=True)
-    ringkas = {k: v for k, v in latest.items() if k not in ("pilihan_lepas", "cadangan_lepas", "semua_saham")}
+    ringkas = {k: v for k, v in latest.items() if k not in ("pilihan_lepas", "cadangan_lepas", "cadangan_terbuka", "semua_saham")}
     ringkas["horizon"] = {
         h: {**v, "bullish": [{k: x[k] for k in x if k != "faktor_z"} for x in v["bullish"]], "bearish": [{k: x[k] for k in x if k != "faktor_z"} for x in v["bearish"]]}
         for h, v in latest["horizon"].items()

@@ -183,7 +183,7 @@ def buang_sesi_belum_tamat(harian: Dict[str, pd.DataFrame], kini: pd.Timestamp |
     """Semasa pasaran masih dibuka, Yahoo memberi bar harian separa untuk hari ini.
     Bar itu bukan harga tutup sebenar — buang supaya analisa hanya guna sesi yang tamat."""
     kini = kini or pd.Timestamp.now(tz=ZON)
-    if kini.hour * 60 + kini.minute >= 17 * 60 + 5:
+    if kini.hour * 60 + kini.minute >= 17 * 60 + 20:  # data Yahoo lewat ~15 minit
         return 0
     hari_ini = pd.Timestamp(kini.date())
     bil = 0

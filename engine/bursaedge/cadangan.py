@@ -406,3 +406,34 @@ def isi_semula(state: dict, cfg: dict, folder_sejarah: Path, harian: Dict[str, p
     }
     log.info("Ujian balik cadangan: %d hari, %d cadangan", len(tarikh_diisi), bil)
     return bil
+
+
+def terbuka(state: dict, harian: Dict[str, pd.DataFrame], tarikh_data: str) -> List[dict]:
+    """Cadangan BELI hari-hari lepas yang masih dalam tempoh pegangan (untuk peringatan jual dalam app)."""
+    hasil = []
+    for p in state.get("cadangan_belum", []):
+        if p.get("bayangan") or p.get("ujian_balik") or p.get("tindakan") != "BELI" or p["tarikh"] >= tarikh_data:
+            continue
+        df = harian.get(p["ticker"])
+        if df is None or not len(df):
+            continue
+        ts = pd.Timestamp(p["tarikh"])
+        i = int(df.index.searchsorted(ts, side="right"))
+        if i == 0:
+            continue
+        hari_ke = len(df) - i
+        asal = float(p["harga"])
+        faktor = float(df["Close"].iloc[i - 1]) / asal if asal > 0 else 1.0
+        if not (0.05 < faktor < 20):
+            faktor = 1.0
+        kini = float(df["Close"].iloc[-1]) / faktor
+        risiko = asal - float(p["henti_rugi"])
+        hasil.append(
+            {
+                "tarikh": p["tarikh"], "horizon": p["horizon"], "ticker": p["ticker"], "kod": p["kod"], "nama": p["nama"],
+                "gred": p.get("gred"), "harga": asal, "henti_rugi": p["henti_rugi"], "sasaran": p["sasaran"],
+                "pegangan": p["pegangan"], "hari_ke": hari_ke, "harga_semasa": round(kini, 3),
+                "r_semasa": round((kini - asal) / risiko, 2) if risiko > 0 else None,
+            }
+        )
+    return hasil
