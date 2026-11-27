@@ -33,6 +33,15 @@ def _ketepatan_terkini(state: dict, h: str, sisi: str, n: int = 30) -> Optional[
     return 100.0 * sum(1 for p in senarai if p.get("kena")) / len(senarai)
 
 
+def _rekod_terkini(state: dict, h: str, tindakan: str, n: int = 20) -> Optional[dict]:
+    """Prestasi n cadangan terkini (termasuk bayangan) bagi pemutus litar."""
+    senarai = [p for p in state.get("cadangan_dinilai", {}).get(h, []) if p.get("tindakan") == tindakan][-n:]
+    if not senarai:
+        return None
+    menang = sum(1 for p in senarai if p.get("r", 0) > 0)
+    return {"n": len(senarai), "kadar": 100.0 * menang / len(senarai), "purata_r": sum(p.get("r", 0) for p in senarai) / len(senarai)}
+
+
 def _lulus_aliran(h: str, sisi: str, m: dict) -> bool:
     harga = m.get("harga", float("nan"))
     if h == "harian":
@@ -92,6 +101,18 @@ def jana(
             had[sisi] = min(had[sisi], 2)
             nota.append(
                 f"Ranking {sisi} {LABEL[h]} hanya tepat {kadar:.0f}% dalam 30 penilaian terkini — cadangan {nama} dihadkan."
+            )
+
+    # Pemutus litar: jika cadangan terkini kerap kalah, gantung paparan (tetapi
+    # terus rekod sebagai "bayangan" supaya boleh disambung semula secara automatik)
+    gantung = {"bullish": False, "bearish": False}
+    for sisi, nama in (("bullish", "BELI"), ("bearish", "ELAK")):
+        rk = _rekod_terkini(state, h, nama, int(c.get("litar_tetingkap", 20)))
+        if rk and rk["n"] >= int(c.get("litar_min", 12)) and rk["kadar"] < float(c.get("litar_kadar", 30)) and rk["purata_r"] < float(c.get("litar_purata_r", -0.25)):
+            gantung[sisi] = True
+            nota.append(
+                f"Cadangan {nama} {LABEL[h]} digantung sementara: {rk['n']} cadangan terkini hanya {rk['kadar']:.0f}% menang "
+                f"(purata {rk['purata_r']:+.2f}R). Enjin terus memantau dan akan menyambungnya apabila prestasi pulih."
             )
 
     lain = [x for x in ranking if x != h]
@@ -155,11 +176,17 @@ def jana(
                 senarai.append(r)
         senarai.sort(key=lambda x: -x["markah"])
         hasil[kunci] = senarai[: had[sisi]]
+        hasil["bayangan_" + kunci] = hasil[kunci] if gantung[sisi] else []
+        if gantung[sisi]:
+            hasil[kunci] = []
 
     pegangan = int(cfg_h.get("pegangan_maks_hari", cfg_h.get("hari_hadapan", 1)))
     return {
         "beli": hasil["beli"],
         "elak": hasil["elak"],
+        "digantung": {"beli": gantung["bullish"], "elak": gantung["bearish"]},
+        "bayangan_beli": hasil["bayangan_beli"],
+        "bayangan_elak": hasil["bayangan_elak"],
         "nota": nota,
         "pegangan_hari": pegangan,
         "sah_hingga": tambah_hari_dagangan(tarikh_data, pegangan),
@@ -178,10 +205,12 @@ def jana(
 def rekod(state: dict, tarikh: str, h: str, cad: dict, ujian_balik: bool = False):
     belum = state.setdefault("cadangan_belum", [])
     belum[:] = [p for p in belum if not (p["tarikh"] == tarikh and p["horizon"] == h)]
-    for item in cad["beli"] + cad["elak"]:
+    bayangan = {id(x) for x in cad.get("bayangan_beli", []) + cad.get("bayangan_elak", [])}
+    for item in cad["beli"] + cad["elak"] + cad.get("bayangan_beli", []) + cad.get("bayangan_elak", []):
         belum.append(
             {
                 **({"ujian_balik": True} if ujian_balik else {}),
+                **({"bayangan": True} if id(item) in bayangan else {}),
                 "tarikh": tarikh,
                 "horizon": h,
                 "tindakan": item["tindakan"],
@@ -202,9 +231,18 @@ def _simulasi(p: dict, df: pd.DataFrame) -> Optional[dict]:
     Henti rugi diperiksa dahulu jika kedua-dua paras dicapai pada hari yang sama."""
     ts = pd.Timestamp(p["tarikh"])
     i = int(df.index.searchsorted(ts, side="right"))  # bar pertama selepas tarikh cadangan
+    if i == 0:
+        return None
     bar = df.iloc[i : i + int(p["pegangan"])]
     arah = 1.0 if p["tindakan"] == "BELI" else -1.0
-    masuk, henti, sasaran = float(p["harga"]), float(p["henti_rugi"]), float(p["sasaran"])
+    # Harga sejarah Yahoo dilaraskan semula selepas dividen/pecahan saham. Skala paras
+    # yang direkod supaya sepadan dengan siri harga semasa pada tarikh cadangan.
+    asal = float(p["harga"])
+    rujukan = float(df["Close"].iloc[i - 1])
+    faktor = rujukan / asal if asal > 0 and rujukan > 0 else 1.0
+    if not (0.05 < faktor < 20):
+        faktor = 1.0
+    masuk, henti, sasaran = asal * faktor, float(p["henti_rugi"]) * faktor, float(p["sasaran"]) * faktor
     risiko = abs(masuk - henti)
     if risiko <= 0:
         return {"hasil": "batal"}
@@ -212,24 +250,25 @@ def _simulasi(p: dict, df: pd.DataFrame) -> Optional[dict]:
         o, hi, lo = float(b["Open"]), float(b["High"]), float(b["Low"])
         if arah > 0:
             if lo <= henti:
-                return _hasil("henti", min(o, henti), masuk, risiko, arah, tarikh)
+                return _hasil("henti", min(o, henti), masuk, risiko, arah, tarikh, faktor)
             if hi >= sasaran:
-                return _hasil("sasaran", max(o, sasaran), masuk, risiko, arah, tarikh)
+                return _hasil("sasaran", max(o, sasaran), masuk, risiko, arah, tarikh, faktor)
         else:
             if hi >= henti:
-                return _hasil("henti", max(o, henti), masuk, risiko, arah, tarikh)
+                return _hasil("henti", max(o, henti), masuk, risiko, arah, tarikh, faktor)
             if lo <= sasaran:
-                return _hasil("sasaran", min(o, sasaran), masuk, risiko, arah, tarikh)
+                return _hasil("sasaran", min(o, sasaran), masuk, risiko, arah, tarikh, faktor)
     if len(bar) < int(p["pegangan"]):
         return None  # belum cukup hari
-    return _hasil("tamat", float(bar["Close"].iloc[-1]), masuk, risiko, arah, bar.index[-1])
+    return _hasil("tamat", float(bar["Close"].iloc[-1]), masuk, risiko, arah, bar.index[-1], faktor)
 
 
-def _hasil(jenis: str, keluar: float, masuk: float, risiko: float, arah: float, tarikh) -> dict:
+def _hasil(jenis: str, keluar: float, masuk: float, risiko: float, arah: float, tarikh, faktor: float = 1.0) -> dict:
+    r = max(-5.0, min(10.0, (keluar - masuk) * arah / risiko))
     return {
         "hasil": jenis,
-        "keluar": round(keluar, 3),
-        "r": round((keluar - masuk) * arah / risiko, 2),
+        "keluar": round(keluar / faktor, 3),
+        "r": round(r, 2),
         "pulangan": round((keluar / masuk - 1.0) * 100.0, 2),
         "tarikh_tutup": pd.Timestamp(tarikh).strftime("%Y-%m-%d"),
     }
@@ -254,6 +293,9 @@ def nilai(state: dict, harian: Dict[str, pd.DataFrame], simpan: int = 60) -> int
         senarai = dinilai.setdefault(p["horizon"], [])
         senarai.append(rekod_)
         dinilai[p["horizon"]] = senarai[-simpan:]
+        bil += 1
+        if p.get("bayangan"):
+            continue  # bayangan hanya untuk pemutus litar, tidak dikira dalam statistik dipaparkan
         s = stat.setdefault(p["horizon"], {}).setdefault(
             p["tindakan"], {"n": 0, "menang": 0, "sasaran": 0, "henti": 0, "tamat": 0, "jumlah_r": 0.0}
         )
@@ -262,7 +304,6 @@ def nilai(state: dict, harian: Dict[str, pd.DataFrame], simpan: int = 60) -> int
         s["menang"] += int(r["r"] > 0)
         s[r["hasil"]] += 1
         s["jumlah_r"] = round(s["jumlah_r"] + r["r"], 2)
-        bil += 1
     state["cadangan_belum"] = baki
     return bil
 
@@ -283,7 +324,7 @@ def ringkasan(state: dict, h: str) -> dict:
             "tamat": s["tamat"],
             "ujian_balik": s.get("ujian_balik", 0),
         }
-    belum = [p for p in state.get("cadangan_belum", []) if p["horizon"] == h]
+    belum = [p for p in state.get("cadangan_belum", []) if p["horizon"] == h and not p.get("bayangan")]
     hasil["belum_dinilai"] = len(belum)
     isi = state.get("cadangan_isi_semula")
     if isinstance(isi, dict):
