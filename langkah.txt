@@ -1,0 +1,49 @@
+Skrin 1080x2400 @ 420dpi
+[01-mula] ok
+Tekan 'Seterusnya' di 540 1578
+[02-tempoh] ok
+Tekan 'Seterusnya' di 710 1485
+[03-repo] ok
+Tekan 'Mula tanpa notifikasi' di 540 1316
+[04-cadangan] ok
+[05-cadangan-bawah] ok
+Tekan 'Mingguan' di 539 615
+[06-cadangan-mingguan] ok
+Tekan 'Bulanan' di 877 615
+[07-cadangan-bulanan] ok
+Tekan 'Harian' di 202 615
+Tekan 'Graf ›' di 768 2112
+[08-graf-hari] ok
+Tekan '1 Minggu' di 337 526
+[10-graf-minggu] ok
+Tekan '1 Bulan' di 539 526
+[11-graf-bulan] ok
+Tekan '1 Tahun' di 741 526
+[12-graf-tahun] ok
+Tekan 'Sejak mula' di 943 526
+[13-graf-maks] ok
+[14-butiran-bawah] ok
+Tekan 'Pilih untuk dagangan Harian' di 539 1767
+[15-dipilih] ok
+[16-butiran-akhir] ok
+TIDAK DIJUMPAI: 'Pilihan saya · Harian'
+[17-pilihan-saya] ok
+[18-rekod-cadangan] ok
+Tekan 'Saham' di 539 2317
+[19-saham] ok
+Tekan '% hari ini' di 634 515
+[20-saham-susun] ok
+Tekan 'Ranking' di 323 2317
+[21-ranking] ok
+Tekan 'Prestasi ›' di 963 895
+[22-prestasi] ok
+Tekan 'Penemuan' di 756 2317
+[23-penemuan] ok
+Tekan 'Tetapan' di 972 2317
+[24-tetapan] ok
+Tekan 'Ingatkan masa beli & jual' di 463 2126
+[25-peringatan] ok
+Tekan 'Uji peringatan (tiba dalam 1 minit)' di 539 929
+Tekan 'OK' di 894 1379
+Tekan 'Modal bagi setiap dagangan' di 540 1213
+[27-kos] ok

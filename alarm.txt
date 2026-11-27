@@ -1,0 +1,75 @@
+      whenElapsed=+33s366ms maxWhenElapsed=+58s982ms
+      operation=PendingIntent{3c139a: PendingIntentRecord{aa974cb com.google.android.gms/com.google.android.gms.scheduler broadcastIntent}}
+    RTC_WAKEUP #8: Alarm{bbec4a8 type 0 origWhen 1795773930537 whenElapsed 326044 com.msims.bursaedge}
+      tag=*walarm*:expo.modules.notifications.NOTIFICATION_EVENT
+      type=RTC_WAKEUP origWhen=2026-11-27 10:05:30.537 window=0 exactAllowReason=policy_permission repeatInterval=0 count=0 flags=0x3
+      policyWhenElapsed: requester=+55s581ms app_standby=-4s393ms device_idle=-- battery_saver=-- tare=-4s393ms
+      whenElapsed=+55s581ms maxWhenElapsed=+55s581ms
+      Alarm clock:
+        triggerTime=2026-11-27 10:05:30.537
+        showIntent=PendingIntent{2151bc1: PendingIntentRecord{9b7cf66 com.msims.bursaedge startActivity}}
+      operation=PendingIntent{35892a7: PendingIntentRecord{d8f8354 com.msims.bursaedge broadcastIntent}}
+      idle-options=Bundle[{android.pendingIntent.backgroundActivityAllowed=false, android:broadcast.temporaryAppAllowlistReasonCode=301, android:broadcast.temporaryAppAllowlistDuration=10000, android:broadcast.temporaryAppAllowlistReason=, android:broadcast.temporaryAppAllowlistType=0, android:broadcast.flags=8}]
+    ELAPSED #9: Alarm{716b2fd type 3 origWhen 332966 whenElapsed 332966 com.google.android.gms}
+      tag=*alarm*:com.google.android.gms.vision.DEPENDENCY
+      type=ELAPSED origWhen=+1m2s503ms window=+59s999ms repeatInterval=0 count=0 flags=0x0
+      policyWhenElapsed: requester=+1m2s503ms app_standby=-17s496ms device_idle=-- battery_saver=-17s496ms tare=-17s496ms
+      whenElapsed=+1m2s503ms maxWhenElapsed=+2m2s502ms
+      operation=PendingIntent{be17bf2: PendingIntentRecord{1f1b243 com.google.android.gms/com.google.android.gms.vision broadcastIntent}}
+    ELAPSED #10: Alarm{b0b80c0 type 3 origWhen 352016 whenElapsed 352016 com.google.android.gms}
+      tag=*alarm*:com.google.android.gms.icing.proxy.ACTION_MAYBE_UPDATE_CONTACTS
+      type=ELAPSED origWhen=+1m21s553ms window=+3m45s0ms repeatInterval=0 count=0 flags=0x0
+      policyWhenElapsed: requester=+1m21s553ms app_standby=-17s520ms device_idle=-- battery_saver=-3m38s439ms tare=-3m38s439ms
+      whenElapsed=+1m21s553ms maxWhenElapsed=+5m6s553ms
+--
+      whenElapsed=+2d0h55m25s44ms maxWhenElapsed=+2d1h55m25s44ms
+      operation=PendingIntent{32c260c: PendingIntentRecord{6ac0b55 com.google.android.apps.wellbeing broadcastIntent}}
+    RTC_WAKEUP #48: Alarm{b72e96a type 0 origWhen 1796001300000 whenElapsed 227695507 com.msims.bursaedge}
+      tag=*walarm*:expo.modules.notifications.NOTIFICATION_EVENT
+      type=RTC_WAKEUP origWhen=2026-11-30 01:15:00.000 window=0 exactAllowReason=policy_permission repeatInterval=0 count=0 flags=0x3
+      policyWhenElapsed: requester=+2d15h10m25s44ms app_standby=-1m31s626ms device_idle=-- battery_saver=-- tare=-1m31s626ms
+      whenElapsed=+2d15h10m25s44ms maxWhenElapsed=+2d15h10m25s44ms
+      Alarm clock:
+        triggerTime=2026-11-30 01:15:00.000
+        showIntent=PendingIntent{507de5b: PendingIntentRecord{9b7cf66 com.msims.bursaedge startActivity}}
+      operation=PendingIntent{f7b96f8: PendingIntentRecord{b6f07d1 com.msims.bursaedge broadcastIntent}}
+      idle-options=Bundle[{android.pendingIntent.backgroundActivityAllowed=false, android:broadcast.temporaryAppAllowlistReasonCode=301, android:broadcast.temporaryAppAllowlistDuration=10000, android:broadcast.temporaryAppAllowlistReason=, android:broadcast.temporaryAppAllowlistType=0, android:broadcast.flags=8}]
+    ELAPSED_WAKEUP #49: Alarm{f4e3236 type 2 origWhen 315360052122 whenElapsed 315360052122 com.google.android.gms}
+      tag=*walarm*:com.google.android.gms/.auth.proximity.firstparty.SystemMemoryCacheService
+      type=ELAPSED_WAKEUP origWhen=+3649d23h56m21s659ms window=+1h0m0s0ms repeatInterval=0 count=0 flags=0x0
+      policyWhenElapsed: requester=+3649d23h56m21s659ms app_standby=-17s520ms device_idle=-- battery_saver=-3m38s338ms tare=-3m38s338ms
+      whenElapsed=+3649d23h56m21s659ms maxWhenElapsed=+3650d0h56m21s659ms
+      operation=PendingIntent{35c0537: PendingIntentRecord{74f2aa4 com.google.android.gms/com.google.android.gms.auth_proximity startService}}
+    ELAPSED_WAKEUP #50: Alarm{a8b500d type 2 origWhen 315360077948 whenElapsed 315360077948 com.google.android.gms}
+      tag=*walarm*:com.google.android.gms/com.google.android.contextmanager.service.ContextManagerService
+      type=ELAPSED_WAKEUP origWhen=+3649d23h56m47s485ms window=+1h0m0s0ms repeatInterval=0 count=0 flags=0x0
+      policyWhenElapsed: requester=+3649d23h56m47s485ms app_standby=-17s520ms device_idle=-- battery_saver=-3m12s514ms tare=-3m12s514ms
+      whenElapsed=+3649d23h56m47s485ms maxWhenElapsed=+3650d0h56m47s485ms
+--
+  Temporary Quota Reserves:
+  
+  Next wake from idle: Alarm{bbec4a8 type 0 origWhen 1795773930537 whenElapsed 326044 com.msims.bursaedge}
+    tag=*walarm*:expo.modules.notifications.NOTIFICATION_EVENT
+    type=RTC_WAKEUP origWhen=2026-11-27 10:05:30.537 window=0 exactAllowReason=policy_permission repeatInterval=0 count=0 flags=0x3
+    policyWhenElapsed: requester=+55s581ms app_standby=-4s393ms device_idle=-- battery_saver=-- tare=-4s393ms
+    whenElapsed=+55s581ms maxWhenElapsed=+55s581ms
+    Alarm clock:
+      triggerTime=2026-11-27 10:05:30.537
+      showIntent=PendingIntent{2151bc1: PendingIntentRecord{9b7cf66 com.msims.bursaedge startActivity}}
+    operation=PendingIntent{35892a7: PendingIntentRecord{d8f8354 com.msims.bursaedge broadcastIntent}}
+    idle-options=Bundle[{android.pendingIntent.backgroundActivityAllowed=false, android:broadcast.temporaryAppAllowlistReasonCode=301, android:broadcast.temporaryAppAllowlistDuration=10000, android:broadcast.temporaryAppAllowlistReason=, android:broadcast.temporaryAppAllowlistType=0, android:broadcast.flags=8}]
+  
+  Past-due non-wakeup alarms: (none)
+    Number of delayed alarms: 0, total delay time: 0
+    Max delay time: 0, max non-interactive time: 0
+  
+  Broadcast ref count: 0
+  PendingIntent send count: 17
+  PendingIntent finish count: 17
+  Listener send count: 22
+  Listener finish count: 22
+  
+        NotificationChannel{mId='peringatan', mName=Peringatan beli & jual, mDescription=, mImportance=5, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=content://settings/system/notification_sound, mLights=false, mLightColor=-11760129, mVibration=[0, 300, 150, 300, 150, 300], mUserLockedFields=0, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800 tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=5, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false}
+      AppSettings: com.android.internal.emulation.pixel_7a (10033)
+      AppSettings: com.android.internal.systemui.navbar.gestural_extra_wide_back (10045)
+      AppSettings: com.android.providers.calendar (10090)
